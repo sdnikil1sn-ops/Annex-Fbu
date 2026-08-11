@@ -1,0 +1,105 @@
+# =====================================================================
+# ANNEX — Root .gitignore
+# =====================================================================
+# Central ignore rules for the whole monorepo. Rules are defined here so
+# that every app, package, and service inherits them without duplication
+# (DRY). Stack-specific files that MUST be committed are never listed
+# here; use per-directory .gitignore files only for exceptions.
+
+# ---------------------------------------------------------------------
+# Secrets & environment variables
+# ---------------------------------------------------------------------
+# Real environment values are never committed. Only *.example files
+# (documented, value-free templates) are allowed into the repository.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# ---------------------------------------------------------------------
+# Logs & runtime artifacts
+# ---------------------------------------------------------------------
+*.log
+logs/
+celerybeat-schedule
+*.pid
+redis-data/
+
+# ---------------------------------------------------------------------
+# Operating system artifacts
+# ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---------------------------------------------------------------------
+# IDE / editor artifacts
+# ---------------------------------------------------------------------
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+*.code-workspace
+
+# ---------------------------------------------------------------------
+# Dart / Flutter
+# ---------------------------------------------------------------------
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+coverage/
+
+# ---------------------------------------------------------------------
+# Python / FastAPI / Celery
+# ---------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.eggs/
+dist/
+
+# ---------------------------------------------------------------------
+# Node.js / React (browser extension)
+# ---------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-error.log*
+.yarn/
+
+# ---------------------------------------------------------------------
+# Android / iOS platform folders (Flutter)
+# ---------------------------------------------------------------------
+.gradle/
+local.properties
+*.jks
+*.keystore
+apps/mobile/android/app/google-services.json
+apps/mobile/ios/Pods/
+*.ipa
+*.apk
+*.aab
+
+# ---------------------------------------------------------------------
+# Supabase CLI
+# ---------------------------------------------------------------------
+supabase/.temp/
+supabase/.branches/
+supabase/.db/
+supabase/.env

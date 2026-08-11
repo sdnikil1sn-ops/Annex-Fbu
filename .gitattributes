@@ -1,0 +1,58 @@
+# =====================================================================
+# ANNEX — .gitattributes
+# =====================================================================
+# Normalizes line endings so that every committed blob is LF regardless
+# of the contributor's OS. Git rewrites to platform-native endings on
+# checkout; on Windows the working tree may show CRLF while the stored
+# bytes stay LF, preventing noisy diffs and merge conflicts.
+
+# All text files are detected and normalized by default.
+* text=auto
+
+# Enforce LF for source, markup, and configuration across all platforms.
+*.dart     text eol=lf
+*.py       text eol=lf
+*.ts       text eol=lf
+*.tsx      text eol=lf
+*.js       text eol=lf
+*.jsx      text eol=lf
+*.json     text eol=lf
+*.yaml     text eol=lf
+*.yml      text eol=lf
+*.md       text eol=lf
+*.sh       text eol=lf
+*.ps1      text eol=lf
+*.html     text eol=lf
+*.css      text eol=lf
+*.scss     text eol=lf
+*.gradle   text eol=lf
+*.toml     text eol=lf
+*.cfg      text eol=lf
+*.ini      text eol=lf
+Dockerfile text eol=lf
+Makefile   text eol=lf
+
+# Windows batch files must stay CRLF to execute correctly.
+*.bat      text eol=crlf
+
+# Binary files are never touched by conversion.
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.webp     binary
+*.ico      binary
+*.bmp      binary
+*.woff     binary
+*.woff2    binary
+*.ttf      binary
+*.otf      binary
+*.pdf      binary
+*.zip      binary
+*.gz       binary
+*.jar      binary
+*.aab      binary
+*.apk      binary
+*.ipa      binary
+*.keystore binary
+*.jks      binary

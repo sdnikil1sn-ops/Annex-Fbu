@@ -1,0 +1,12 @@
+# =====================================================================
+# ANNEX — Issue template configuration
+# =====================================================================
+# Blank issues are allowed so contributors can raise topics that do not
+# fit the structured templates (e.g. RFCs, design discussions).
+#
+# NOTE: Once the public GitHub repository exists, add `contact_links`
+# here pointing at the project Discussions page so Q&A traffic routes
+# away from the issue tracker. This file is intentionally minimal until
+# the repository URL is known.
+
+blank_issues_enabled: true

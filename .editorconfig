@@ -1,0 +1,36 @@
+# =====================================================================
+# ANNEX — EditorConfig
+# =====================================================================
+# EditorConfig keeps formatting consistent across every editor and IDE.
+# Tools (dart format, ruff, prettier) remain authoritative where they
+# exist; this file covers everything else.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Two-space indentation: Dart, JavaScript/TypeScript, JSON, YAML, web.
+[*.{dart,js,jsx,ts,tsx,json,yaml,yml,html,css,scss}]
+indent_style = space
+indent_size = 2
+
+# Python: PEP 8 mandates four spaces.
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.{sh,bat,ps1}]
+indent_style = space
+indent_size = 2
+
+# Makefiles require literal tabs.
+[Makefile]
+indent_style = tab
+
+# Markdown uses trailing whitespace intentionally (hard line breaks).
+[*.md]
+trim_trailing_whitespace = false

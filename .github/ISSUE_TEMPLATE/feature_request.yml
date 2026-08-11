@@ -1,0 +1,61 @@
+name: Feature request
+description: Propose a new capability or improvement for ANNEX
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an improvement. Please be specific about the problem
+        and the value of the solution — proposals aligned with the product roadmap
+        (see README.md) are prioritized.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What need or pain point does this address? Who is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature, its user flow, and expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else was tried or considered, and why is this better?
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Which part of the product would this change?
+      options:
+        - Mobile app (Flutter)
+        - Web app (Flutter Web)
+        - Browser extension
+        - Backend API (FastAPI)
+        - AI / analysis engine
+        - Multilingual / i18n
+        - Accessibility
+        - Security
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will we know this feature is done? (Checklist is welcome)
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you able to help implement this?
+      options:
+        - label: I can implement this myself
+        - label: I can help test or review

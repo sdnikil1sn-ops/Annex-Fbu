@@ -1,0 +1,72 @@
+name: Bug report
+description: Report a reproducible defect in ANNEX so maintainers can fix it
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Before submitting, please search existing
+        issues to avoid duplicates. Include as much detail as you can — vague
+        reports cannot be acted on.
+  - type: input
+    id: version
+    attributes:
+      label: ANNEX version
+      description: Version from CHANGELOG.md, or the commit SHA of the build
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Which part of the product is affected?
+      options:
+        - Mobile app (Flutter)
+        - Web app (Flutter Web)
+        - Browser extension
+        - Backend API (FastAPI)
+        - Database / data layer
+        - Authentication
+        - AI / analysis engine
+        - OCR / image processing
+        - Background jobs (Celery)
+        - CI/CD or build tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, exact steps — include URLs, sample text, or files if relevant
+      placeholder: |
+        1. Go to '...'
+        2. Tap on '...'
+        3. Scroll to '...'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, device model, browser (for web/extension), app version, network
+      placeholder: |
+        - OS: Windows 11
+        - Device: Pixel 8 / Chrome 126
+        - ANNEX version: 0.1.0
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste error logs, stack traces, or attach screenshots/videos
