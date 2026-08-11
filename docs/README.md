@@ -12,7 +12,7 @@ repository as the code.
 | `architecture/decisions/` (ADRs) | ✅ Created — template + 8 ADRs | 2 |
 | `architecture/diagrams/` | ✅ Created — C4, component, sequence, ER | 2 |
 | `api/v1-endpoints.md` | ✅ Created | 2 |
-| `api/openapi.yaml` (generated) | Planned — generated from FastAPI | 3 |
+| `api/openapi.yaml` (generated) | ✅ Generated via `scripts/generate_openapi.py` | 3 |
 | `database/schema-design.md` | ✅ Created | 2 |
 | `database/migrations/` (DDL) | Planned — Supabase CLI | 4 |
 | `guides/installation.md` | ✅ Created | 2 |

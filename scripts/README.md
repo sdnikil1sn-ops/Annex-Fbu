@@ -8,6 +8,7 @@ ANNEX. Scripts keep developer commands consistent across machines and CI.
 | Script | Purpose |
 |---|---|
 | [`validate_repo.py`](./validate_repo.py) | Repository health: YAML syntax, markdown links, required files, secret patterns. Runs locally and in CI (`ci.yml`). |
+| [`generate_openapi.py`](./generate_openapi.py) | Regenerate `docs/api/openapi.yaml` from the FastAPI application (Phase 3+). |
 
 ## Planned scripts (added with their targets)
 

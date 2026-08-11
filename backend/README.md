@@ -49,6 +49,9 @@ backend/
 ## Status
 
 - **Phase 1:** directory documented and reserved.
-- **Phase 3:** FastAPI core — config, health, error handling, service layer.
+- **Phase 3 (done):** FastAPI core — config, structured logging, request-ID
+  tracing, error envelope, health/meta endpoints, DI wiring, pytest suite
+  (14 tests, ~96% coverage). Gates: `ruff`, `mypy`, `pytest --cov`.
+- **Phase 4 (next):** repositories + database access behind the service layer.
 - **Phase 6:** AI, OCR, and image-processing services.
 - **Phase 7:** Redis caching and Celery workers.

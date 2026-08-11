@@ -1,0 +1,90 @@
+# =====================================================================
+# ANNEX backend — project metadata and tooling configuration.
+# Dependencies are pinned to the latest stable releases (verified
+# 2026-08-11) for reproducible builds; lockfile (uv.lock / requirements)
+# follows in Phase 3 hardening.
+# =====================================================================
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "annex-backend"
+version = "0.1.0"
+description = "ANNEX backend — AI-powered Media & Information Literacy platform API (FastAPI service layer)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [{ name = "ANNEX Contributors" }]
+keywords = ["media-literacy", "fact-checking", "fastapi", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.1",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.15.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx==0.28.1",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.16.2",
+    "mypy==2.3.0",
+]
+
+[project.scripts]
+annex-api = "app.main:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+# ---------------------------------------------------------------------
+# Ruff (lint + format)
+# ---------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+# FastAPI's Depends() in default arguments is the framework idiom, not a bug.
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+# ---------------------------------------------------------------------
+# Mypy (static type checking)
+# ---------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+mypy_path = "."
+
+# ---------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+# ---------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------
+[tool.coverage.run]
+source = ["app"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

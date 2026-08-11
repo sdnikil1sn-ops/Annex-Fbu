@@ -36,6 +36,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     files, secret patterns).
   - `.github/workflows/ci.yml` — CI running the validation script on push/PR.
 
+- **Backend core (Phase 3).**
+  - FastAPI service layer skeleton (ADR-0003): application factory with DI
+    wiring, layered package structure (api/application/domain/infrastructure).
+  - `pydantic-settings` configuration (`backend/.env.example` template).
+  - Structured logging with request-ID correlation and ASGI request-ID
+    middleware (client-supplied IDs never trusted).
+  - Unified error envelope (`code`, `message`, `request_id`, `details`) with
+    handlers for validation, HTTP, app, and unhandled errors.
+  - System endpoints: `GET /health`, `GET /health/ready`, `GET /api/v1/meta/version`,
+    CORS middleware.
+  - Test suite: 14 tests (config, request-ID, health, error envelope) at ~96%
+    coverage; gates `ruff`, `mypy`, `pytest --cov` all green.
+  - `scripts/generate_openapi.py` → `docs/api/openapi.yaml` (executable API
+    contract, ADR-0002).
+  - `.github/workflows/backend.yml` — backend lint/type-check/test CI.
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture

@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: ANNEX API
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      tags:
+      - system
+      summary: Health
+      description: Liveness probe — 200 whenever the process is serving requests.
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Health Health Get
+  /health/ready:
+    get:
+      tags:
+      - system
+      summary: Readiness
+      description: 'Readiness probe — reports the status of configured dependencies.
+
+
+        Dependency checks are registered in later phases (database in Phase 4,
+
+        Redis in Phase 7). An empty check list means the service is ready by
+
+        definition today.'
+      operationId: readiness_health_ready_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Readiness Health Ready Get
+  /api/v1/meta/version:
+    get:
+      tags:
+      - system
+      summary: Version
+      description: Return the API name, version, and runtime environment.
+      operationId: version_api_v1_meta_version_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Version Api V1 Meta Version Get

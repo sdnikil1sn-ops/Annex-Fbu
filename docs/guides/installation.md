@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Git | 2.40+ | 2.55.0 | everything |
 | Flutter SDK (stable) | 3.35+ | 3.44.8 (Dart 3.12.2) | mobile/web apps + packages |
-| Python | 3.12+ | 3.14.3 | backend, validation script |
+| Python | 3.12+ | 3.13.14 (Microsoft Store) / 3.14.3 (msys) | backend, validation script |
 | Node.js + npm | 20 LTS+ | 25.1.0 / 11.11.0 | browser extension |
 | Docker Desktop | 24+ | 29.6.2 | local infra (Redis, Supabase, workers) |
 | Supabase CLI | latest | Phase 4 | db/storage migrations |
