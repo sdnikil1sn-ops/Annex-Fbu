@@ -9,7 +9,7 @@ image forensics, and source credibility scoring with structured media-literacy e
 
 | | |
 |---|---|
-| **Status** | Foundation (Phase 1) — in active development |
+| **Status** | Architecture (Phase 2) — in active development |
 | **License** | [Apache-2.0](./LICENSE) |
 | **Version** | 0.1.0 (see [CHANGELOG](./CHANGELOG.md)) |
 | **Platforms** | Android · iOS · Web · Windows · Linux · macOS · Browser extensions |
@@ -78,12 +78,14 @@ annex/
 
 ## Getting started
 
-> Detailed instructions land in later phases. The repository is currently in
-> **Phase 1 (Foundation)** — no application code exists yet.
+> The repository is currently in **Phase 2 (Architecture & Documentation)** —
+> no application code exists yet; the blueprint for it is complete.
 
-- [Installation guide](docs/installation.md) — *scheduled for Phase 2*
-- [Developer guide](docs/developer-guide.md) — *scheduled for Phase 2*
-- [Deployment guide](docs/deployment.md) — *scheduled for Phase 11*
+- [Installation guide](docs/guides/installation.md) — install and verify the full toolchain
+- [Developer guide](docs/guides/developer-guide.md) — how the monorepo works day-to-day
+- [Testing guide](docs/guides/testing.md) — test strategy and commands
+- [Architecture overview](docs/architecture/overview.md) — how ANNEX is built
+- Deployment guide — *scheduled for Phase 11*
 
 See [docs/README.md](docs/README.md) for the full documentation index.
 

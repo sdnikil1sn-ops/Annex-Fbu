@@ -22,9 +22,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Monorepo directory scaffold: `apps/`, `backend/`, `packages/`, `docs/`,
     `scripts/`, `docker/`, `.github/` with per-directory README documentation.
 
+- **Architecture blueprint and documentation (Phase 2).**
+  - `docs/architecture/overview.md` — C4 system-context and container views.
+  - 8 Architecture Decision Records (monorepo/tooling, contracts-first API,
+    backend service layer, Supabase PostgreSQL, Firebase Auth, AI provider
+    abstraction, runtime i18n, Celery/Redis pipelines) plus an ADR template.
+  - 5 Mermaid diagrams: C4 context, C4 containers, analysis component view,
+    analysis sequence trace, and the entity-relationship model.
+  - `docs/api/v1-endpoints.md` — versioned API endpoint map.
+  - `docs/database/schema-design.md` — logical schema, RLS policy matrix.
+  - `docs/guides/` — installation, developer guide, and testing strategy.
+  - `scripts/validate_repo.py` — repository health checks (YAML, links, required
+    files, secret patterns).
+  - `.github/workflows/ci.yml` — CI running the validation script on push/PR.
+
 ### Changed
 
-- Nothing yet — project initialized.
+- Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
+  baseline (status, links, documentation index).
 
 ### Deprecated
 

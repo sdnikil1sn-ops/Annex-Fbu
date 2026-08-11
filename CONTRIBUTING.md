@@ -46,8 +46,9 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 - **Types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `ci`, `perf`, `build`, `security`.
-- **Scopes:** `mobile`, `web`, `extension`, `backend`, `shared-ui`, `shared-models`,
-  `shared-utils`, `db`, `auth`, `ai`, `docs`, `ci`, `repo`.
+- **Scopes:** `mobile`, `web`, `extension`, `backend`, `shared_ui`, `shared_models`,
+  `shared_utils`, `db`, `auth`, `ai`, `docs`, `ci`, `repo`.
+  Package scopes mirror the directory names under `packages/`.
 - **Examples:**
   - `feat(backend): add claim analysis endpoint`
   - `fix(mobile): persist language preference across sessions`

@@ -1,0 +1,52 @@
+# =====================================================================
+# ANNEX — CI (Phase 2: repository-level validation)
+# =====================================================================
+# Runs on every push to main and every PR: YAML syntax, markdown link
+# integrity, required files, and secret-leakage patterns.
+#
+# Stack-specific jobs are appended as their targets exist:
+#   - backend (lint/format/tests)  -> Phase 3
+#   - flutter (format/analyze/test) -> Phase 8
+#   - extension (lint/test)         -> Phase 10
+#   - docker build/scan + release   -> Phases 7/11
+#
+# Secrets are injected via repository secrets / GitHub Environments, never
+# hardcoded in this file.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege: this workflow only reads repository contents.
+permissions:
+  contents: read
+
+# Cancel superseded runs of the same workflow/ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-validation:
+    name: Repository validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install validation dependencies
+        run: python -m pip install --quiet pyyaml
+
+      - name: Validate repository
+        run: python scripts/validate_repo.py
