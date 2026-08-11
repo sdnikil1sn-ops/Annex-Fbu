@@ -24,24 +24,19 @@ paths:
       tags:
       - system
       summary: Readiness
-      description: 'Readiness probe — reports the status of configured dependencies.
+      description: 'Readiness probe — reports each configured dependency''s status.
 
 
-        Dependency checks are registered in later phases (database in Phase 4,
+        Returns 200 when every registered check passes and 503 (degraded) as
 
-        Redis in Phase 7). An empty check list means the service is ready by
-
-        definition today.'
+        soon as one fails, with per-check detail for operators.'
       operationId: readiness_health_ready_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Readiness Health Ready Get
+              schema: {}
   /api/v1/meta/version:
     get:
       tags:
@@ -58,3 +53,24 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Version Api V1 Meta Version Get
+  /api/v1/users/me:
+    get:
+      tags:
+      - users
+      summary: Me
+      description: 'Return the authenticated caller''s profile.
+
+
+        Requires ``Authorization: Bearer <Firebase ID token>``. The user is
+
+        hydrated into the database on first access (ADR-0005).'
+      operationId: me_api_v1_users_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Me Api V1 Users Me Get

@@ -67,6 +67,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     migrations and exercise the repository against real PostgreSQL; CI now runs
     a Postgres service container for them.
 
+- **Authentication & security (Phase 5).**
+  - Firebase ID-token verification behind a ``TokenVerifier`` port: Admin SDK
+    implementation + explicit mock for tests (ADR-0005).
+  - ``get_current_user`` dependency (Bearer parsing, 401 envelope, hydration)
+    and ``require_roles`` RBAC factory (403 envelope).
+  - ``User`` domain entity + ``UserRepository`` port with PostgreSQL and
+    in-memory implementations; ``UserService.get_or_create`` mirrors Firebase
+    identities into ``users``/``profiles`` on first login.
+  - Protected endpoint ``GET /api/v1/users/me``.
+  - 46 tests (~96% coverage) including 8 Postgres integration tests.
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture

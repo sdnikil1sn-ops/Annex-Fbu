@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     # readiness checks.
     database_url: str | None = None
 
+    # Authentication (Phase 5): Firebase project + Admin SDK service account.
+    # None disables the token verifier (protected routes answer 503).
+    firebase_project_id: str | None = None
+    firebase_service_account_path: str | None = None
+
     # CORS: origins allowed to call the API from browsers.
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:8080"]

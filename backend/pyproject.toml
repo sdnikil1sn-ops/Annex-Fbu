@@ -32,6 +32,7 @@ dependencies = [
     "pydantic==2.13.4",
     "pydantic-settings==2.15.0",
     "psycopg[binary]==3.3.4",
+    "firebase-admin==7.5.0",
 ]
 
 [project.optional-dependencies]
@@ -72,6 +73,11 @@ python_version = "3.12"
 strict = true
 warn_unused_ignores = true
 mypy_path = "."
+
+# Firebase Admin SDK ships without type stubs.
+[[tool.mypy.overrides]]
+module = ["firebase_admin", "firebase_admin.*", "google.auth.*"]
+ignore_missing_imports = true
 
 # ---------------------------------------------------------------------
 # Pytest

@@ -1,9 +1,9 @@
 """Application factory and entry point.
 
 Wires the application core per ADR-0003: configuration, structured
-logging, request-ID tracing, the error envelope, CORS, and the versioned
-router. The application/domain/infrastructure layers are added from
-Phase 4 onward.
+logging, request-ID tracing, the error envelope, CORS, the versioned
+router, and the infrastructure ports (database repositories, token
+verifier) bound to ``app.state`` for dependency injection.
 """
 
 from fastapi import FastAPI
@@ -13,18 +13,32 @@ from app import __version__
 from app.api.errors import register_exception_handlers
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_router
+from app.application.ports.auth import TokenVerifier
+from app.application.services.user_service import UserService
 from app.core.checks import DatabaseHealthCheck, DependencyCheck
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
+from app.infrastructure.auth.firebase_token_verifier import FirebaseTokenVerifier
+from app.infrastructure.repositories.user_repository import PostgresUserRepository
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    token_verifier: TokenVerifier | None = None,
+    user_service: UserService | None = None,
+) -> FastAPI:
     """Create and configure a FastAPI application instance.
 
     Args:
         settings: Optional settings override (used by tests); defaults to
             the process-wide cached environment settings.
+        token_verifier: Optional verifier override (tests use the mock);
+            defaults to a Firebase verifier when Firebase is configured.
+        user_service: Optional user service override (tests use mocks);
+            defaults to the PostgreSQL-backed service when a database is
+            configured.
 
     Returns:
         A fully wired FastAPI application.
@@ -49,6 +63,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings.database_url:
         checks.append(DatabaseHealthCheck(settings.database_url))
     app.state.checks = checks
+
+    # Authentication (ADR-0005): wire the token verifier and the user
+    # hydration service from settings unless overridden (tests).
+    if token_verifier is None and settings.firebase_project_id:
+        token_verifier = FirebaseTokenVerifier(
+            settings.firebase_project_id,
+            settings.firebase_service_account_path,
+        )
+    if user_service is None and token_verifier is not None and settings.database_url:
+        user_service = UserService(PostgresUserRepository(settings.database_url))
+    app.state.token_verifier = token_verifier
+    app.state.user_service = user_service
 
     # add_middleware prepends: the LAST registration is the OUTERMOST layer.
     # RequestIdMiddleware is registered last so even CORS-preflight responses

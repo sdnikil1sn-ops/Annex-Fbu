@@ -56,6 +56,9 @@ backend/
   `AnalysisService` use cases, DB-backed readiness probe. 33 tests (~98%
   coverage), including integration tests against real PostgreSQL (migrations
   applied from `supabase/migrations/`).
-- **Phase 5 (next):** Firebase Authentication integration.
-- **Phase 6:** AI, OCR, and image-processing services.
+- **Phase 5 (done):** Firebase Authentication — token-verifier port (Admin
+  SDK + mock), ``get_current_user``/``require_roles`` dependencies, user
+  hydration into ``users``/``profiles``, protected ``GET /api/v1/users/me``.
+  46 tests (~96% coverage).
+- **Phase 6 (next):** AI, OCR, and image-processing services.
 - **Phase 7:** Redis caching and Celery workers.
