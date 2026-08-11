@@ -1,16 +1,17 @@
 """Service health endpoints.
 
 ``/health`` is an unauthenticated liveness probe; ``/health/ready`` reports
-readiness of configured dependencies (database: Phase 4, Redis: Phase 7).
-Both live outside the versioned prefix so orchestrators can probe them
-without API versioning.
+readiness of configured dependencies. Both live outside the versioned
+prefix so orchestrators can probe them without API versioning.
 """
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 
 from app.api.deps import get_settings_dep
+from app.core.checks import DependencyCheck
 from app.core.config import Settings
 
 router = APIRouter(tags=["system"])
@@ -30,12 +31,22 @@ def health(settings: Settings = Depends(get_settings_dep)) -> dict[str, Any]:
 
 
 @router.get("/health/ready")
-def readiness() -> dict[str, Any]:
-    """Readiness probe — reports the status of configured dependencies.
+def readiness(request: Request) -> JSONResponse:
+    """Readiness probe — reports each configured dependency's status.
 
-    Dependency checks are registered in later phases (database in Phase 4,
-    Redis in Phase 7). An empty check list means the service is ready by
-    definition today.
+    Returns 200 when every registered check passes and 503 (degraded) as
+    soon as one fails, with per-check detail for operators.
     """
-    checks: list[dict[str, Any]] = []
-    return {"data": {"status": "ok", "checks": checks}}
+    checks: list[DependencyCheck] = list(getattr(request.app.state, "checks", []))
+    results = [check.check() for check in checks]
+    healthy = all(result.ok for result in results)
+    payload = {
+        "data": {
+            "status": "ok" if healthy else "degraded",
+            "checks": [
+                {"name": result.name, "ok": result.ok, "detail": result.detail}
+                for result in results
+            ],
+        }
+    }
+    return JSONResponse(status_code=200 if healthy else 503, content=payload)

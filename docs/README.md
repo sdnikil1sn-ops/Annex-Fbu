@@ -14,7 +14,7 @@ repository as the code.
 | `api/v1-endpoints.md` | ✅ Created | 2 |
 | `api/openapi.yaml` (generated) | ✅ Generated via `scripts/generate_openapi.py` | 3 |
 | `database/schema-design.md` | ✅ Created | 2 |
-| `database/migrations/` (DDL) | Planned — Supabase CLI | 4 |
+| `database/migrations/` (DDL) | ✅ Created — `supabase/migrations/` (6 files + RLS) | 4 |
 | `guides/installation.md` | ✅ Created | 2 |
 | `guides/developer-guide.md` | ✅ Created | 2 |
 | `guides/testing.md` | ✅ Created | 2 |

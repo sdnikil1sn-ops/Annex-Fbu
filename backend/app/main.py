@@ -13,6 +13,7 @@ from app import __version__
 from app.api.errors import register_exception_handlers
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_router
+from app.core.checks import DatabaseHealthCheck, DependencyCheck
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
@@ -41,6 +42,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Bind the settings instance to the app so routes resolve the same
     # configuration object through DI (see app.api.deps).
     app.state.settings = settings
+
+    # Readiness probes registered from settings (database: Phase 4,
+    # Redis: Phase 7). Served by GET /health/ready.
+    checks: list[DependencyCheck] = []
+    if settings.database_url:
+        checks.append(DatabaseHealthCheck(settings.database_url))
+    app.state.checks = checks
 
     # add_middleware prepends: the LAST registration is the OUTERMOST layer.
     # RequestIdMiddleware is registered last so even CORS-preflight responses

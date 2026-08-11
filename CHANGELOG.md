@@ -52,6 +52,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     contract, ADR-0002).
   - `.github/workflows/backend.yml` — backend lint/type-check/test CI.
 
+- **Database & repositories (Phase 4).**
+  - 6 versioned Supabase migrations (`supabase/migrations/`) implementing the
+    full Phase 2 schema (16 tables, indexes, RLS policies on every user table).
+  - Domain layer: `Analysis` aggregate with the ADR-0008 state machine
+    (validated transitions, structured failure reasons).
+  - Repository ports (`app.application.ports`) with a PostgreSQL implementation
+    (psycopg, fully parameterized SQL) and an explicitly-named in-memory mock.
+  - `AnalysisService` use cases (submit, lifecycle, list with composite-cursor
+    pagination, delete).
+  - DB-backed readiness probe on `/health/ready` (503 degraded with per-check
+    detail); `DATABASE_URL` setting.
+  - 33 tests (~98% coverage) including 5 integration tests that apply the
+    migrations and exercise the repository against real PostgreSQL; CI now runs
+    a Postgres service container for them.
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture

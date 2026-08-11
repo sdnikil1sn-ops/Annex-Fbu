@@ -28,6 +28,12 @@ def test_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.app_name == "ANNEX API (test)"
 
 
+def test_database_url_defaults_to_none() -> None:
+    """The database is opt-in: no URL means no DB wiring."""
+    settings = Settings(_env_file=None)
+    assert settings.database_url is None
+
+
 def test_unknown_env_variables_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     """Unknown variables must not crash settings parsing."""
     monkeypatch.setenv("TOTALLY_UNKNOWN_ANNEX_VAR", "whatever")
