@@ -60,6 +60,16 @@ class Settings(BaseSettings):
     firebase_project_id: str | None = None
     firebase_service_account_path: str | None = None
 
+    # AI providers (Phase 6): claim analysis. At least one key enables the
+    # analyzer; Gemini is optional (ADR-0006).
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+
+    # OCR (Phase 6): Tesseract language codes.
+    ocr_languages: str = "eng"
+
     # CORS: origins allowed to call the API from browsers.
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:8080"]

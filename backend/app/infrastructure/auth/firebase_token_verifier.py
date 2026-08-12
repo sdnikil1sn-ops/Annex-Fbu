@@ -15,14 +15,11 @@ from firebase_admin.credentials import Certificate
 from google.auth.exceptions import DefaultCredentialsError
 
 from app.application.ports.auth import TokenVerificationError, TokenVerifier, VerifiedIdentity
+from app.core.exceptions import ConfigurationError
 
 # Guard so repeated verifier construction (e.g. across test app builds)
 # reuses the single process-wide Firebase app instead of erroring.
 _APP_INITIALIZED = False
-
-
-class ConfigurationError(Exception):
-    """Raised when the Firebase Admin SDK cannot be initialized."""
 
 
 class FirebaseTokenVerifier(TokenVerifier):

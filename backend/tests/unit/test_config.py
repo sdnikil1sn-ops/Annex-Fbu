@@ -34,6 +34,29 @@ def test_database_url_defaults_to_none() -> None:
     assert settings.database_url is None
 
 
+def test_ai_provider_defaults() -> None:
+    """AI provider keys must be opt-in; models default to the pinned names."""
+    settings = Settings(_env_file=None)
+    assert settings.openai_api_key is None
+    assert settings.openai_model == "gpt-4o-mini"
+    assert settings.gemini_api_key is None
+    assert settings.gemini_model == "gemini-2.5-flash"
+    assert settings.ocr_languages == "eng"
+
+
+def test_ai_provider_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AI keys and model names must be configurable via the environment."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o")
+    monkeypatch.setenv("GEMINI_API_KEY", "gem-test")
+    monkeypatch.setenv("OCR_LANGUAGES", "eng+spa")
+    settings = Settings(_env_file=None)
+    assert settings.openai_api_key == "sk-test"
+    assert settings.openai_model == "gpt-4o"
+    assert settings.gemini_api_key == "gem-test"
+    assert settings.ocr_languages == "eng+spa"
+
+
 def test_unknown_env_variables_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     """Unknown variables must not crash settings parsing."""
     monkeypatch.setenv("TOTALLY_UNKNOWN_ANNEX_VAR", "whatever")

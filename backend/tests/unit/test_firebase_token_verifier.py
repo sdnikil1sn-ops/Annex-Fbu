@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from app.infrastructure.auth.firebase_token_verifier import (
-    ConfigurationError,
-    FirebaseTokenVerifier,
-)
+from app.core.exceptions import ConfigurationError
+from app.infrastructure.auth.firebase_token_verifier import FirebaseTokenVerifier
 
 
 def test_missing_service_account_raises_configuration_error() -> None:

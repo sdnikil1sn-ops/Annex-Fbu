@@ -78,6 +78,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Protected endpoint ``GET /api/v1/users/me``.
   - 46 tests (~96% coverage) including 8 Postgres integration tests.
 
+- **AI & media processing (Phase 6).**
+  - AI capability ports (``ClaimAnalyzer``, ``Summarizer``, ``Embedder``) with
+    OpenAI (primary) and Gemini (optional) adapters routing every call through
+    one guarded prompt, plus an explicit mock for tests and local development
+    (ADR-0006).
+  - Prompt-injection guard layer: untrusted content is delimited and labeled as
+    data (never instructions), control characters are stripped with a length
+    cap, and structured model output is validated against an exact schema
+    contract that rejects missing, extra, and malformed fields.
+  - Media-processing ports (``OcrAdapter``, ``ForensicsAdapter``) with a
+    Tesseract OCR adapter and an OpenCV error-level-analysis forensics adapter,
+    plus explicit mocks; shared ``ConfigurationError`` for missing
+    prerequisites (e.g. the Tesseract binary).
+  - Provider settings (``OPENAI_API_KEY``/``OPENAI_MODEL``,
+    ``GEMINI_API_KEY``/``GEMINI_MODEL``, ``OCR_LANGUAGES``) and pinned
+    dependencies (``openai``, ``google-genai``, ``pytesseract``,
+    ``opencv-python-headless``).
+  - 40 new tests covering adversarial prompt-injection payloads, analyzer
+    adapters against deterministic fakes, and media adapters against real
+    images (86 tests total, ~92% coverage).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -99,3 +120,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Repository policy established: secrets are never committed
   (see [SECURITY.md](./SECURITY.md)).
+- Prompt-injection guard layer (Phase 6) treats user content and model output
+  as untrusted data and is verified against adversarial payloads (ADR-0006).
