@@ -3,7 +3,12 @@
 from uuid import UUID, uuid4
 
 from app.application.ports.ai import AnalysisProviderError
+from app.application.services.analysis_service import AnalysisService
 from app.core.config import Settings
+from app.domain.analysis import AnalysisStatus
+from app.infrastructure.repositories.mock_analysis_repository import (
+    MockAnalysisRepository,
+)
 from app.main import create_app
 from fastapi.testclient import TestClient
 
@@ -166,3 +171,40 @@ def test_analysis_not_configured_returns_503(client: TestClient) -> None:
     response = client.post("/api/v1/analysis", json={"text": "x"})
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "analysis.not_configured"
+
+
+def test_submit_enqueues_when_worker_configured(
+    settings: Settings, token_verifier, user_service
+) -> None:
+    """With a dispatcher bound, POST returns PENDING + retry_after and enqueues."""
+
+    class FakeDispatcher:
+        def __init__(self) -> None:
+            self.dispatched: list[UUID] = []
+
+        def dispatch(self, analysis_id: UUID) -> None:
+            self.dispatched.append(analysis_id)
+
+    dispatcher = FakeDispatcher()
+    repository = MockAnalysisRepository()
+    service = AnalysisService(repository, task_dispatcher=dispatcher)
+    app = create_app(
+        settings,
+        token_verifier=token_verifier,
+        user_service=user_service,
+        analysis_service=service,
+    )
+
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.post(
+            "/api/v1/analysis", json={"text": "hello"}, headers=_headers()
+        )
+
+    assert response.status_code == 202
+    data = response.json()["data"]
+    assert data["status"] == "pending"
+    assert response.json()["meta"]["retry_after"] == 5
+    analysis_id = UUID(data["id"])
+    assert dispatcher.dispatched == [analysis_id]
+    # The row persists in PENDING; the worker would complete it asynchronously.
+    assert repository.get(analysis_id).status is AnalysisStatus.PENDING

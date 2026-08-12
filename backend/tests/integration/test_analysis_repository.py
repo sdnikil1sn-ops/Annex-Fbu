@@ -73,6 +73,15 @@ def test_report_round_trips(repository: AnalysisRepository) -> None:
     assert fetched.report == {"summary": "s", "claims": [{"text": "c"}]}
 
 
+def test_content_round_trips(repository: AnalysisRepository) -> None:
+    """The content column survives a write + read cycle (worker reprocessing)."""
+    analysis = repository.create(Analysis(content="untrusted text"))
+
+    fetched = repository.get(analysis.analysis_id)
+    assert fetched is not None
+    assert fetched.content == "untrusted text"
+
+
 def test_list_by_user_orders_newest_first(repository: AnalysisRepository) -> None:
     """A user's analyses come back newest-first with pagination support."""
     owner = uuid4()

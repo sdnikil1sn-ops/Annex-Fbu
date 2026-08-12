@@ -117,6 +117,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     adaptation (117 tests total, ~94% coverage); the executable OpenAPI
     contract is regenerated with the new paths (ADR-0002).
 
+- **Async pipelines & rate limiting (Phase 7).**
+  - Celery worker (``app.infrastructure.tasks``) executing the analysis
+    pipeline asynchronously (ADR-0008): idempotent ``analysis.run`` task
+    keyed by ``analysis_id`` (broker-level task-ID dedup + PENDING-state
+    guard), exponential-backoff retries with a requeue-to-PENDING retry edge
+    in the state machine, and dead-lettering to FAILED with structured
+    reasons (``analysis.processing_failed`` / ``analysis.blocked_by_guard``).
+  - ``content`` column on ``analyses`` (migration 20260812000002) so the
+    worker reprocesses from the persisted input by ID alone.
+  - ``AnalysisTaskDispatcher`` port + Celery implementation: the analysis
+    service enqueues when a broker is configured and keeps the interim
+    synchronous path otherwise (same ``202 + analysis_id`` contract; clients
+    poll ``GET /analysis/{id}``).
+  - Redis-backed fixed-window rate limiting (``RATE_LIMIT_DEFAULT`` /
+    ``RATE_LIMIT_ANALYSIS``) enforced by an ASGI middleware per client +
+    endpoint scope with the standard 429 envelope; a no-op fallback (with a
+    logged warning) keeps dev/tests broker-free; Redis readiness probe on
+    ``/health/ready``.
+  - Local dev stack: ``docker/compose.dev.yml`` (Redis + API + worker),
+    ``docker/backend.Dockerfile`` (non-root, healthcheck),
+    ``scripts/dev.sh``/``dev.ps1``, and ``.github/workflows/docker.yml``
+    image-build CI.
+  - 38 new tests: full state-machine matrix, worker task (happy path,
+    idempotency, guard block, retry requeue, dead-letter), rate-limit
+    parsing/windows/429s, dispatcher wiring, and Redis integration
+    (155 tests total, ~94% coverage).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture

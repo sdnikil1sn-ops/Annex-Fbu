@@ -3,10 +3,11 @@
 Wires the application core per ADR-0003: configuration, structured
 logging, request-ID tracing, the error envelope, CORS, the versioned
 router, and the infrastructure ports (database repositories, token
-verifier, claim analyzer, media adapters) bound to ``app.state`` for
-dependency injection.
+verifier, claim analyzer, media adapters, Celery task dispatcher, rate
+limiter) bound to ``app.state`` for dependency injection.
 """
 
+import redis
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -19,15 +20,19 @@ from app.application.ports.auth import TokenVerifier
 from app.application.ports.media import ForensicsAdapter, OcrAdapter
 from app.application.services.analysis_service import AnalysisService
 from app.application.services.user_service import UserService
-from app.core.checks import DatabaseHealthCheck, DependencyCheck
+from app.core.checks import DatabaseHealthCheck, DependencyCheck, RedisHealthCheck
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
 from app.infrastructure.ai.factory import build_claim_analyzer
 from app.infrastructure.auth.firebase_token_verifier import FirebaseTokenVerifier
 from app.infrastructure.media.factory import build_forensics_adapter, build_ocr_adapter
+from app.infrastructure.rate_limit.factory import build_rate_limiter
+from app.infrastructure.rate_limit.limiter import RateLimiter
+from app.infrastructure.rate_limit.middleware import RateLimitMiddleware
 from app.infrastructure.repositories.analysis_repository import PostgresAnalysisRepository
 from app.infrastructure.repositories.user_repository import PostgresUserRepository
+from app.infrastructure.tasks.dispatcher import build_analysis_task_dispatcher
 
 
 def create_app(
@@ -39,6 +44,7 @@ def create_app(
     ocr_adapter: OcrAdapter | None = None,
     forensics_adapter: ForensicsAdapter | None = None,
     analysis_service: AnalysisService | None = None,
+    rate_limiter: RateLimiter | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application instance.
 
@@ -57,7 +63,11 @@ def create_app(
         forensics_adapter: Optional forensics override; defaults to OpenCV.
         analysis_service: Optional analysis service override (tests use the
             in-memory repository); defaults to the PostgreSQL-backed service
-            when a database is configured.
+            when a database is configured, enqueuing work on the Celery
+            worker when a broker is configured (ADR-0008).
+        rate_limiter: Optional rate limiter override (tests inject a
+            deterministic limiter); defaults to a Redis-backed limiter when
+            Redis is configured, else a no-op fallback.
 
     Returns:
         A fully wired FastAPI application.
@@ -81,6 +91,13 @@ def create_app(
     checks: list[DependencyCheck] = []
     if settings.database_url:
         checks.append(DatabaseHealthCheck(settings.database_url))
+
+    # Async pipeline infrastructure (Phase 7, ADR-0008): a shared Redis
+    # client backs the readiness probe and the rate limiter when configured.
+    redis_client = redis.Redis.from_url(settings.redis_url) if settings.redis_url else None
+    app.state.redis = redis_client
+    if redis_client is not None:
+        checks.append(RedisHealthCheck(redis_client))
     app.state.checks = checks
 
     # Authentication (ADR-0005): wire the token verifier and the user
@@ -104,15 +121,27 @@ def create_app(
     app.state.ocr_adapter = ocr_adapter or build_ocr_adapter(settings)
     app.state.forensics_adapter = forensics_adapter or build_forensics_adapter()
 
-    # Analysis pipeline (Phase 4 domain + Phase 6 API): wire the service
-    # from settings unless overridden (tests inject the in-memory mock).
+    # Analysis pipeline (Phase 4 domain + Phase 6 API + Phase 7 workers):
+    # wire the service from settings unless overridden (tests inject the
+    # in-memory mock). With a broker configured the service enqueues work
+    # for the Celery worker (ADR-0008); without one it keeps the interim
+    # synchronous path.
+    task_dispatcher = build_analysis_task_dispatcher(settings)
+    app.state.analysis_task_dispatcher = task_dispatcher
     if analysis_service is None and settings.database_url:
-        analysis_service = AnalysisService(PostgresAnalysisRepository(settings.database_url))
+        analysis_service = AnalysisService(
+            PostgresAnalysisRepository(settings.database_url),
+            task_dispatcher=task_dispatcher,
+        )
     app.state.analysis_service = analysis_service
 
     # add_middleware prepends: the LAST registration is the OUTERMOST layer.
-    # RequestIdMiddleware is registered last so even CORS-preflight responses
-    # carry X-REQUEST-ID and the tracing context is active for CORS handling.
+    # Order: RateLimit innermost (so 429s pass through CORS and carry CORS
+    # headers), CORS, then RequestId outermost so even rate-limited and
+    # preflight responses carry X-REQUEST-ID.
+    rate_limiter = rate_limiter or build_rate_limiter(settings, redis_client)
+    app.state.rate_limiter = rate_limiter
+    app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,

@@ -1,0 +1,62 @@
+# =====================================================================
+# ANNEX — local development stack (Phase 7, ADR-0008)
+#
+#   docker compose -f docker/compose.dev.yml up --build
+#
+# Runs Redis, the FastAPI service, and the Celery analysis worker. The
+# database is NOT part of this file: use `supabase start` (Phase 4) and
+# point DATABASE_URL at it.
+# =====================================================================
+name: annex-dev
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    command: ["annex-api"]
+    environment: &annex-env
+      APP_ENV: development
+      # Required — point at your Supabase local/production PostgreSQL.
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL (e.g. postgresql://postgres:postgres@host.docker.internal:54322/postgres)}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      RATE_LIMIT_DEFAULT: ${RATE_LIMIT_DEFAULT:-120/minute}
+      RATE_LIMIT_ANALYSIS: ${RATE_LIMIT_ANALYSIS:-20/minute}
+      # Optional (Phase 5/6) — omit for mock verifier/analyzer behavior.
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    command:
+      - celery
+      - -A
+      - app.infrastructure.tasks.celery_app:celery_app
+      - worker
+      - --loglevel=info
+      - --concurrency=2
+    environment: *annex-env
+    depends_on:
+      redis:
+        condition: service_healthy

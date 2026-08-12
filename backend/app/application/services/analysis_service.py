@@ -9,13 +9,31 @@ from uuid import UUID
 
 from app.application.ports.ai import (
     AnalysisProviderError,
+    ClaimAnalysis,
     ClaimAnalyzer,
     GuardedPromptError,
 )
 from app.application.ports.repositories import AnalysisRepository, Cursor
-from app.domain.analysis import Analysis, AnalysisInputType, AnalysisStatus
+from app.application.ports.tasks import AnalysisTaskDispatcher
+from app.domain.analysis import (
+    FAILURE_PROCESSING,
+    Analysis,
+    AnalysisInputType,
+    AnalysisStatus,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _to_report(result: ClaimAnalysis) -> dict[str, Any]:
+    """Serialize a claim analysis into the persisted report shape."""
+    return {
+        "summary": result.summary,
+        "claims": [
+            {"text": claim.text, "verifiability": claim.verifiability}
+            for claim in result.claims
+        ],
+    }
 
 
 class AnalysisService:
@@ -23,10 +41,20 @@ class AnalysisService:
 
     Args:
         repository: The persistence port (Postgres or in-memory mock).
+        task_dispatcher: Optional async task port (ADR-0008). When bound,
+            submissions are enqueued for the worker pool instead of running
+            inline; ``None`` keeps the interim synchronous path (tests and
+            deployments without a broker).
     """
 
-    def __init__(self, repository: AnalysisRepository) -> None:
+    def __init__(
+        self,
+        repository: AnalysisRepository,
+        *,
+        task_dispatcher: AnalysisTaskDispatcher | None = None,
+    ) -> None:
         self._repository = repository
+        self._task_dispatcher = task_dispatcher
 
     def submit(
         self,
@@ -34,6 +62,7 @@ class AnalysisService:
         *,
         user_id: UUID | None = None,
         locale: str = "en",
+        content: str | None = None,
     ) -> Analysis:
         """Create a pending analysis for later processing.
 
@@ -41,11 +70,15 @@ class AnalysisService:
             input_type: The kind of content submitted.
             user_id: Owner; None for anonymous requests.
             locale: Analysis language code.
+            content: The untrusted input, persisted so the worker can
+                (re)process the analysis from its ID alone (ADR-0008).
 
         Returns:
             The persisted analysis in PENDING state.
         """
-        analysis = Analysis(input_type=input_type, user_id=user_id, locale=locale)
+        analysis = Analysis(
+            input_type=input_type, user_id=user_id, locale=locale, content=content
+        )
         return self._repository.create(analysis)
 
     def get(self, analysis_id: UUID) -> Analysis | None:
@@ -81,9 +114,25 @@ class AnalysisService:
             updated = replace(updated, report=report)
         return self._repository.update_status(updated)
 
+    def complete_with_report(
+        self, analysis: Analysis, result: ClaimAnalysis
+    ) -> Analysis:
+        """Complete an analysis with the report for an analyzer result."""
+        return self.complete(analysis, report=_to_report(result))
+
     def fail(self, analysis: Analysis, reason: str) -> Analysis:
         """Move an analysis into FAILED with a structured reason."""
         updated = analysis.transition_to(AnalysisStatus.FAILED, failure_reason=reason)
+        return self._repository.update_status(updated)
+
+    def requeue(self, analysis: Analysis) -> Analysis:
+        """Return a PROCESSING analysis to PENDING for worker re-delivery.
+
+        Celery retries a transiently failed attempt with exponential backoff
+        (ADR-0008); the state machine's ``processing -> pending`` edge lets
+        the retried task re-run the pipeline from the persisted content.
+        """
+        updated = analysis.transition_to(AnalysisStatus.PENDING)
         return self._repository.update_status(updated)
 
     def analyze_text(
@@ -95,12 +144,12 @@ class AnalysisService:
         user_id: UUID | None = None,
         locale: str = "en",
     ) -> Analysis:
-        """Run the claim-analysis pipeline synchronously (interim, pre-worker).
+        """Submit text for claim analysis and either enqueue or run it.
 
-        Submits the analysis, processes it through the injected analyzer, and
-        completes it with the structured report — or fails it with a
-        structured reason when the provider errors. ADR-0008 moves this into
-        Celery workers; the API keeps the same contract either way.
+        When the service is bound to a task dispatcher (Phase 7, ADR-0008)
+        the submission is enqueued and returned in PENDING state — the
+        worker completes it and clients poll. Without a dispatcher the
+        pipeline runs inline (tests and broker-less deployments).
 
         Args:
             text: The untrusted content to analyze.
@@ -110,27 +159,28 @@ class AnalysisService:
             locale: Analysis language code.
 
         Returns:
-            The completed analysis with its report, or a FAILED analysis
-            when the provider cannot produce valid output.
+            The PENDING analysis when enqueued, otherwise the completed
+            analysis with its report, or a FAILED analysis when the provider
+            cannot produce valid output.
         """
-        analysis = self.submit(input_type, user_id=user_id, locale=locale)
-        analysis = self.mark_processing(analysis)
+        analysis = self.submit(input_type, user_id=user_id, locale=locale, content=text)
+        if self._task_dispatcher is not None:
+            self._task_dispatcher.dispatch(analysis.analysis_id)
+            return analysis
+        return self._run_pipeline(analysis, analyzer)
+
+    def _run_pipeline(self, analysis: Analysis, analyzer: ClaimAnalyzer) -> Analysis:
+        """Run the inline pipeline (interim synchronous path, pre-worker)."""
+        processing = self.mark_processing(analysis)
         try:
-            result = analyzer.analyze(text)
+            result = analyzer.analyze(analysis.content or "")
         except (AnalysisProviderError, GuardedPromptError):
             logger.warning(
                 "claim analysis failed for analysis %s (provider error)",
                 analysis.analysis_id,
             )
-            return self.fail(analysis, reason="analysis.processing_failed")
-        report = {
-            "summary": result.summary,
-            "claims": [
-                {"text": claim.text, "verifiability": claim.verifiability}
-                for claim in result.claims
-            ],
-        }
-        return self.complete(analysis, report=report)
+            return self.fail(processing, reason=FAILURE_PROCESSING)
+        return self.complete_with_report(processing, result)
 
     def delete(self, analysis_id: UUID) -> bool:
         """Delete an analysis; returns True if a row was removed."""

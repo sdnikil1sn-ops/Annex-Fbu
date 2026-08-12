@@ -1,0 +1,13 @@
+# Keep local and tooling artifacts out of Docker build contexts.
+.git
+.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+backend/.env
+backend/.coverage
+**/node_modules
+**/build
+**/.dart_tool

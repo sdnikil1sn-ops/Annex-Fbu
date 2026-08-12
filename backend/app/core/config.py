@@ -70,6 +70,19 @@ class Settings(BaseSettings):
     # OCR (Phase 6): Tesseract language codes.
     ocr_languages: str = "eng"
 
+    # Async pipelines (Phase 7, ADR-0008): Redis URL used by the rate
+    # limiter and readiness probe; Celery broker/result endpoints for the
+    # analysis worker. Broker/backend fall back to the Redis URL so a
+    # single local Redis instance covers development.
+    redis_url: str | None = None
+    celery_broker_url: str | None = None
+    celery_result_backend: str | None = None
+
+    # Rate limiting (Phase 7): fixed-window counters per client, expressed
+    # as "<count>/<unit>" (second | minute | hour | day).
+    rate_limit_default: str = "120/minute"
+    rate_limit_analysis: str = "20/minute"
+
     # CORS: origins allowed to call the API from browsers.
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:8080"]

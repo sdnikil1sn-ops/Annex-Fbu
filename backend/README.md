@@ -60,5 +60,11 @@ backend/
   SDK + mock), ``get_current_user``/``require_roles`` dependencies, user
   hydration into ``users``/``profiles``, protected ``GET /api/v1/users/me``.
   46 tests (~96% coverage).
-- **Phase 6 (next):** AI, OCR, and image-processing services.
-- **Phase 7:** Redis caching and Celery workers.
+- **Phase 6 (done):** AI, OCR, and image-processing services — guarded
+  OpenAI/Gemini claim analyzers, Tesseract OCR + OpenCV forensics,
+  composition-root factories, and the analysis API (117 tests).
+- **Phase 7 (done):** Celery + Redis — async analysis pipeline (ADR-0008)
+  with idempotent, retrying, dead-lettering worker tasks; Redis-backed
+  rate limiting with a 429 envelope; Redis readiness probe; local dev
+  stack (``docker compose -f docker/compose.dev.yml up``) and dev scripts
+  (155 tests).

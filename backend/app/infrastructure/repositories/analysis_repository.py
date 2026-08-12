@@ -19,7 +19,7 @@ from app.domain.analysis import Analysis, AnalysisInputType, AnalysisStatus
 
 # Columns shared by every query in this repository.
 _COLUMNS = (
-    "id, user_id, input_type, status, locale, failure_reason, report, "
+    "id, user_id, input_type, status, locale, failure_reason, content, report, "
     "created_at, completed_at"
 )
 
@@ -56,6 +56,7 @@ class PostgresAnalysisRepository(AnalysisRepository):
             status=AnalysisStatus(row["status"]),
             locale=row["locale"],
             failure_reason=row["failure_reason"],
+            content=row["content"],
             report=row["report"],
             created_at=row["created_at"],
             completed_at=row["completed_at"],
@@ -67,7 +68,7 @@ class PostgresAnalysisRepository(AnalysisRepository):
             conn.execute(
                 f"""
                 insert into public.analyses ({_COLUMNS})
-                values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     analysis.analysis_id,
@@ -76,6 +77,7 @@ class PostgresAnalysisRepository(AnalysisRepository):
                     analysis.status.value,
                     analysis.locale,
                     analysis.failure_reason,
+                    analysis.content,
                     _report_param(analysis.report),
                     analysis.created_at,
                     analysis.completed_at,

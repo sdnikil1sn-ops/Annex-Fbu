@@ -1,10 +1,10 @@
 """Analysis endpoints — v1 contract: docs/api/v1-endpoints.md.
 
-Submitting an analysis runs the claim-analysis pipeline inline through the
-bound analyzer and persists the report (interim synchronous path; ADR-0008
-moves processing into Celery workers). The API keeps the documented
-``202 + analysis_id`` contract either way, so clients poll
-``GET /analysis/{id}`` for the report.
+Submitting an analysis returns ``202 + analysis_id`` and the worker pool
+(Phase 7, ADR-0008) processes it asynchronously — clients poll
+``GET /analysis/{id}`` for the report. Without a broker the pipeline runs
+inline through the bound analyzer (interim synchronous path) with the same
+contract.
 """
 
 from __future__ import annotations

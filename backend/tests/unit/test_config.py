@@ -57,6 +57,31 @@ def test_ai_provider_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.ocr_languages == "eng+spa"
 
 
+def test_phase7_pipeline_defaults() -> None:
+    """Redis/Celery are opt-in; rate limits default to the documented values."""
+    settings = Settings(_env_file=None)
+    assert settings.redis_url is None
+    assert settings.celery_broker_url is None
+    assert settings.celery_result_backend is None
+    assert settings.rate_limit_default == "120/minute"
+    assert settings.rate_limit_analysis == "20/minute"
+
+
+def test_phase7_pipeline_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Redis/Celery endpoints and rate limits must be env-configurable."""
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("CELERY_BROKER_URL", "redis://localhost:6379/1")
+    monkeypatch.setenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/2")
+    monkeypatch.setenv("RATE_LIMIT_DEFAULT", "10/second")
+    monkeypatch.setenv("RATE_LIMIT_ANALYSIS", "5/minute")
+    settings = Settings(_env_file=None)
+    assert settings.redis_url == "redis://localhost:6379/0"
+    assert settings.celery_broker_url == "redis://localhost:6379/1"
+    assert settings.celery_result_backend == "redis://localhost:6379/2"
+    assert settings.rate_limit_default == "10/second"
+    assert settings.rate_limit_analysis == "5/minute"
+
+
 def test_unknown_env_variables_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     """Unknown variables must not crash settings parsing."""
     monkeypatch.setenv("TOTALLY_UNKNOWN_ANNEX_VAR", "whatever")

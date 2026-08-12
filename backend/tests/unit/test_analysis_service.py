@@ -5,7 +5,12 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from app.application.ports.ai import AnalysisProviderError
+from app.application.ports.ai import (
+    AnalysisProviderError,
+    ClaimAnalysis,
+    ClaimItem,
+    GuardedPromptError,
+)
 from app.application.services.analysis_service import AnalysisService
 from app.domain.analysis import (
     AnalysisInputType,
@@ -139,3 +144,75 @@ def test_analyze_text_attaches_owner_and_locale(service: AnalysisService) -> Non
     )
     assert analysis.user_id == owner
     assert analysis.locale == "pt-BR"
+
+
+def test_submit_stores_content(service: AnalysisService) -> None:
+    """The submitted content is persisted so workers can reprocess by ID."""
+    analysis = service.submit(AnalysisInputType.TEXT, content="the untrusted text")
+    assert analysis.content == "the untrusted text"
+    assert service.get(analysis.analysis_id).content == "the untrusted text"
+
+
+def test_analyze_text_dispatches_when_worker_configured() -> None:
+    """With a dispatcher bound, submission enqueues and stays PENDING."""
+
+    class FakeDispatcher:
+        def __init__(self) -> None:
+            self.dispatched: list = []
+
+        def dispatch(self, analysis_id) -> None:
+            self.dispatched.append(analysis_id)
+
+    dispatcher = FakeDispatcher()
+    dispatcher_service = AnalysisService(
+        MockAnalysisRepository(), task_dispatcher=dispatcher
+    )
+    analyzer = MockClaimAnalyzer()
+
+    analysis = dispatcher_service.analyze_text("hello", analyzer=analyzer)
+
+    assert analysis.status is AnalysisStatus.PENDING
+    assert dispatcher.dispatched == [analysis.analysis_id]
+    # The worker does the actual analysis — nothing ran inline.
+    assert analyzer.analyzed_texts == []
+    assert dispatcher_service.get(analysis.analysis_id).status is AnalysisStatus.PENDING
+
+
+def test_requeue_returns_processing_to_pending(service: AnalysisService) -> None:
+    """A transiently failed attempt is requeued to PENDING for retry."""
+    analysis = service.submit(AnalysisInputType.TEXT, content="x")
+    processing = service.mark_processing(analysis)
+
+    requeued = service.requeue(processing)
+
+    assert requeued.status is AnalysisStatus.PENDING
+    assert requeued.completed_at is None
+    assert requeued.failure_reason is None
+    assert requeued.content == "x"
+    assert service.get(analysis.analysis_id).status is AnalysisStatus.PENDING
+
+
+def test_complete_with_report_builds_report_shape(service: AnalysisService) -> None:
+    """complete_with_report serializes an analyzer result into the report."""
+    analysis = service.submit(AnalysisInputType.TEXT)
+    processing = service.mark_processing(analysis)
+    result = ClaimAnalysis(
+        claims=[ClaimItem(text="c", verifiability=0.9)], summary="s"
+    )
+
+    completed = service.complete_with_report(processing, result)
+
+    assert completed.report == {"summary": "s", "claims": [{"text": "c", "verifiability": 0.9}]}
+    assert service.get(analysis.analysis_id).report == completed.report
+
+
+def test_analyze_text_guard_error_fails_inline(service: AnalysisService) -> None:
+    """The inline fallback fails cleanly on prompt-guard violations."""
+
+    class GuardedAnalyzer:
+        def analyze(self, text: str):
+            raise GuardedPromptError("hostile")
+
+    analysis = service.analyze_text("evil", analyzer=GuardedAnalyzer())  # type: ignore[arg-type]
+    assert analysis.status is AnalysisStatus.FAILED
+    assert analysis.report is None

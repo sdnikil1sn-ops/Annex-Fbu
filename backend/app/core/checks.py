@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import psycopg
+import redis
 
 
 @dataclass(frozen=True)
@@ -48,4 +49,25 @@ class DatabaseHealthCheck:
                 conn.execute("select 1")
             return CheckResult(name=self.name, ok=True)
         except psycopg.Error as exc:
+            return CheckResult(name=self.name, ok=False, detail=str(exc))
+
+
+class RedisHealthCheck:
+    """Probes Redis with a lightweight PING.
+
+    Args:
+        client: The shared application Redis client (bound in the factory).
+    """
+
+    name = "redis"
+
+    def __init__(self, client: redis.Redis) -> None:
+        self._client = client
+
+    def check(self) -> CheckResult:
+        """Return ok only when Redis answers PING."""
+        try:
+            self._client.ping()
+            return CheckResult(name=self.name, ok=True)
+        except redis.RedisError as exc:
             return CheckResult(name=self.name, ok=False, detail=str(exc))

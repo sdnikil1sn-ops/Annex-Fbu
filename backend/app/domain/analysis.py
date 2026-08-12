@@ -3,9 +3,12 @@
 The state machine follows ADR-0008:
 
     pending -> processing -> completed | failed
+    processing -> pending                 (worker retry with backoff)
 
 Transitions are validated here in the domain layer, so no caller can move an
-analysis into an illegal state.
+analysis into an illegal state. The ``processing -> pending`` edge exists so
+Celery can requeue a transiently failed attempt (provider outage) for
+re-delivery without weakening the terminal-state invariants.
 """
 
 from __future__ import annotations
@@ -34,10 +37,16 @@ class AnalysisStatus(StrEnum):
     FAILED = "failed"
 
 
-# Legal transitions of the analysis state machine.
+# Legal transitions of the analysis state machine (ADR-0008). The
+# ``processing -> pending`` edge is the worker retry: a transiently failed
+# attempt is requeued for re-delivery instead of dead-lettering.
 ALLOWED_TRANSITIONS: dict[AnalysisStatus, set[AnalysisStatus]] = {
     AnalysisStatus.PENDING: {AnalysisStatus.PROCESSING, AnalysisStatus.FAILED},
-    AnalysisStatus.PROCESSING: {AnalysisStatus.COMPLETED, AnalysisStatus.FAILED},
+    AnalysisStatus.PROCESSING: {
+        AnalysisStatus.COMPLETED,
+        AnalysisStatus.FAILED,
+        AnalysisStatus.PENDING,
+    },
     AnalysisStatus.COMPLETED: set(),
     AnalysisStatus.FAILED: set(),
 }
@@ -45,6 +54,13 @@ ALLOWED_TRANSITIONS: dict[AnalysisStatus, set[AnalysisStatus]] = {
 
 class InvalidStatusTransitionError(Exception):
     """Raised when an analysis is moved into an illegal state."""
+
+
+# Structured failure reasons persisted on FAILED analyses (ADR-0008).
+# Defined here (not in infrastructure) so every layer shares one source of
+# truth for the codes clients observe.
+FAILURE_PROCESSING = "analysis.processing_failed"
+FAILURE_BLOCKED = "analysis.blocked_by_guard"
 
 
 def _utcnow() -> datetime:
@@ -63,6 +79,9 @@ class Analysis:
         status: Current state-machine state.
         locale: Analysis language code.
         failure_reason: Structured error code when status is FAILED.
+        content: The untrusted input persisted with the submission so the
+            worker can (re)process the analysis from the ID alone
+            (idempotent, resumable pipelines — ADR-0008).
         report: Structured analysis output (claims + summary) attached when
             the analysis completes; None until then.
         created_at: Submission timestamp (UTC).
@@ -75,6 +94,7 @@ class Analysis:
     status: AnalysisStatus = AnalysisStatus.PENDING
     locale: str = "en"
     failure_reason: str | None = None
+    content: str | None = None
     report: dict[str, Any] | None = None
     created_at: datetime = field(default_factory=_utcnow)
     completed_at: datetime | None = None
@@ -114,6 +134,7 @@ class Analysis:
             status=new_status,
             locale=self.locale,
             failure_reason=failure_reason if new_status is AnalysisStatus.FAILED else None,
+            content=self.content,
             report=self.report,
             created_at=self.created_at,
             completed_at=completed_at,
