@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 
 from app.api.deps import get_current_user, get_education_service_dep
 from app.api.errors import AppError
@@ -31,14 +31,20 @@ def _section_payload(section: LessonSection) -> dict[str, Any]:
 
 
 def _resolve_lesson(
-    lesson_ref: str, user: User, service: EducationService
+    lesson_ref: str, locale: str, user: User, service: EducationService
 ) -> Lesson | None:
     """Resolve a lesson reference that is either a UUID or a stable slug."""
     try:
         lesson_id = UUID(lesson_ref)
     except ValueError:
-        return service.get_by_slug(lesson_ref, locale=user.locale, user_id=user.id)
-    return service.get_lesson(lesson_id, locale=user.locale, user_id=user.id)
+        return service.get_by_slug(lesson_ref, locale=locale, user_id=user.id)
+    return service.get_lesson(lesson_id, locale=locale, user_id=user.id)
+
+
+def _locale(locale: str | None, user: User) -> str:
+    """Resolve the content locale: an explicit query override wins over
+    the caller's profile locale, which wins over the default."""
+    return (locale or user.locale or "").strip().lower()
 
 
 def _lesson_payload(lesson: Lesson, *, detail: bool = False) -> dict[str, Any]:
@@ -65,17 +71,35 @@ def _lesson_payload(lesson: Lesson, *, detail: bool = False) -> dict[str, Any]:
 
 @router.get("")
 def list_lessons(
+    locale: str | None = Query(
+        default=None,
+        min_length=2,
+        max_length=35,
+        description="Content locale override (default: profile locale).",
+    ),
     user: User = Depends(get_current_user),
     service: EducationService = Depends(get_education_service_dep),
 ) -> dict[str, Any]:
-    """Return the published curriculum, localized for the caller."""
-    lessons = service.list_lessons(locale=user.locale, user_id=user.id)
+    """Return the published curriculum, localized for the caller.
+
+    The optional ``locale`` query parameter overrides the caller's
+    profile locale so clients can preview content in another language
+    (the resolved content falls back through the locale chain, ADR-0007).
+    """
+    resolved = _locale(locale, user)
+    lessons = service.list_lessons(locale=resolved, user_id=user.id)
     return {"data": [_lesson_payload(lesson) for lesson in lessons]}
 
 
 @router.get("/{lesson_ref}")
 def get_lesson(
     lesson_ref: str = Path(pattern=r"[0-9a-f-]{36}|[a-z0-9-]{1,100}"),
+    locale: str | None = Query(
+        default=None,
+        min_length=2,
+        max_length=35,
+        description="Content locale override (default: profile locale).",
+    ),
     user: User = Depends(get_current_user),
     service: EducationService = Depends(get_education_service_dep),
 ) -> dict[str, Any]:
@@ -83,9 +107,11 @@ def get_lesson(
 
     ``lesson_ref`` accepts either the lesson UUID or its stable slug
     (e.g. ``spotting-misinformation``), so clients can deep-link with
-    human-readable URLs.
+    human-readable URLs. The optional ``locale`` query parameter
+    overrides the caller's profile locale.
     """
-    lesson = _resolve_lesson(lesson_ref, user, service)
+    resolved = _locale(locale, user)
+    lesson = _resolve_lesson(lesson_ref, resolved, user, service)
     if lesson is None:
         raise AppError("lesson.not_found", "Lesson not found.", status_code=404)
     return {"data": _lesson_payload(lesson, detail=True)}
@@ -94,11 +120,18 @@ def get_lesson(
 @router.post("/{lesson_ref}/complete")
 def complete_lesson(
     lesson_ref: str = Path(pattern=r"[0-9a-f-]{36}|[a-z0-9-]{1,100}"),
+    locale: str | None = Query(
+        default=None,
+        min_length=2,
+        max_length=35,
+        description="Content locale override (default: profile locale).",
+    ),
     user: User = Depends(get_current_user),
     service: EducationService = Depends(get_education_service_dep),
 ) -> dict[str, Any]:
     """Mark a lesson complete (idempotent; first completion wins)."""
-    lesson = _resolve_lesson(lesson_ref, user, service)
+    resolved = _locale(locale, user)
+    lesson = _resolve_lesson(lesson_ref, resolved, user, service)
     if lesson is None:
         raise AppError("lesson.not_found", "Lesson not found.", status_code=404)
     progress = service.mark_complete(user.id, lesson.id)

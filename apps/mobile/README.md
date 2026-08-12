@@ -42,6 +42,9 @@ mobile/
 - **Phase 12 (done):** feature code extracted to
   `packages/shared_features` and shared with the web app; the app now
   contributes only its platform-specific shell and entry point.
+- **Phase 16 (done):** lessons curriculum surfaced — the education flow
+  (localized lesson list with progress, content detail, idempotent
+  completion) ships from `shared_features` as a third bottom tab.
 
 ## Implemented (Phase 9 → 12)
 
@@ -51,7 +54,7 @@ mobile/
 │   ├── main.dart             # Composition root: Firebase + API + i18n wiring
 │   ├── app/annex_app.dart    # Mobile shell: MaterialApp + bottom tabs
 │   └── core/config.dart      # API base URL via --dart-define
-├── test/                     # Widget tests (3): sign-in gate + full flow
+├── test/                     # Widget tests (4): sign-in gate, full flow, lessons
 └── pubspec.yaml
 ```
 

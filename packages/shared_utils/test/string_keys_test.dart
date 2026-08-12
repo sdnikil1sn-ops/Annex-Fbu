@@ -12,8 +12,16 @@ void main() {
 
     test('keys cover the namespaces served by the backend', () {
       final namespaces = StringKeys.all.map(StringKeys.namespaceOf).toSet();
-      expect(namespaces,
-          containsAll(<String>{'common', 'analysis', 'auth', 'errors'}));
+      expect(
+          namespaces,
+          containsAll(<String>{
+            'common',
+            'analysis',
+            'auth',
+            'errors',
+            'lessons',
+            'settings'
+          }));
     });
 
     test('isValid rejects malformed keys', () {

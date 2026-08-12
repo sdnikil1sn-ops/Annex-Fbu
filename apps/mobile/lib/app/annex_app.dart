@@ -43,8 +43,15 @@ class _Root extends StatelessWidget {
     if (auth.user == null) {
       return const SignInScreen();
     }
-    return ChangeNotifierProvider<AnalysisController>(
-      create: (_) => services.analysisController(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AnalysisController>(
+          create: (_) => services.analysisController(),
+        ),
+        ChangeNotifierProvider<LessonsController>(
+          create: (_) => services.lessonsController(),
+        ),
+      ],
       child: const _MainShell(),
     );
   }
@@ -58,14 +65,20 @@ class _MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final i18n = AppScope.of(context).i18n;
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
-        body: TabBarView(children: const [AnalysisScreen(), SettingsScreen()]),
+        body: const TabBarView(
+          children: [AnalysisScreen(), LessonsScreen(), SettingsScreen()],
+        ),
         bottomNavigationBar: TabBar(
           tabs: [
             Tab(
               icon: const Icon(Icons.analytics_outlined),
               text: i18n.t(StringKeys.analysisTitle),
+            ),
+            Tab(
+              icon: const Icon(Icons.menu_book_outlined),
+              text: i18n.t(StringKeys.lessonsTitle),
             ),
             Tab(
               icon: const Icon(Icons.settings_outlined),

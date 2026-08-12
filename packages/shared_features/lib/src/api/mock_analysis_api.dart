@@ -32,6 +32,7 @@ class MockAnalysisApi implements AnalysisApi {
 
   final List<Analysis> _analyses = [];
   final List<String> _inputs = [];
+  final Map<String, DateTime> _completedLessons = {};
   int _nextId = 1;
 
   /// Whether the last submission was recorded (test hook).
@@ -102,6 +103,151 @@ class MockAnalysisApi implements AnalysisApi {
   }
 
   @override
+  Future<List<Lesson>> fetchLessons({String locale = 'en'}) async {
+    await Future<void>.delayed(delay);
+    return _seed.map((lesson) {
+      return Lesson(
+        id: lesson.id,
+        slug: lesson.slug,
+        difficulty: lesson.difficulty,
+        category: lesson.category,
+        estimatedMinutes: lesson.estimatedMinutes,
+        orderIndex: lesson.orderIndex,
+        title: _localized(lesson, locale).title,
+        summary: _localized(lesson, locale).summary,
+        completed: _completedLessons.containsKey(lesson.id),
+        completedAt: _completedLessons[lesson.id],
+      );
+    }).toList();
+  }
+
+  @override
+  Future<Lesson> fetchLesson(String idOrSlug, {String locale = 'en'}) async {
+    await Future<void>.delayed(delay);
+    final lesson = _findLesson(idOrSlug);
+    if (lesson == null) {
+      throw const ApiException('lesson.not_found', 'Lesson not found');
+    }
+    final content = _localized(lesson, locale);
+    return Lesson(
+      id: lesson.id,
+      slug: lesson.slug,
+      difficulty: lesson.difficulty,
+      category: lesson.category,
+      estimatedMinutes: lesson.estimatedMinutes,
+      orderIndex: lesson.orderIndex,
+      title: content.title,
+      summary: content.summary,
+      completed: _completedLessons.containsKey(lesson.id),
+      completedAt: _completedLessons[lesson.id],
+      locale: content.locale,
+      sections: content.sections,
+    );
+  }
+
+  @override
+  Future<LessonProgress> completeLesson(String idOrSlug) async {
+    await Future<void>.delayed(delay);
+    final lesson = _findLesson(idOrSlug);
+    if (lesson == null) {
+      throw const ApiException('lesson.not_found', 'Lesson not found');
+    }
+    // Idempotent: the first completion timestamp wins.
+    final now = DateTime.now().toUtc();
+    final completedAt = _completedLessons.putIfAbsent(lesson.id, () => now);
+    return LessonProgress(lessonId: lesson.id, completedAt: completedAt);
+  }
+
+  // --- lesson internals --------------------------------------------------
+
+  static final List<Lesson> _seed = [
+    const Lesson(
+      id: '00000000-0000-4000-8000-000000000001',
+      slug: 'spotting-misinformation',
+      difficulty: 'beginner',
+      category: 'media_literacy',
+      estimatedMinutes: 5,
+      orderIndex: 1,
+    ),
+    const Lesson(
+      id: '00000000-0000-4000-8000-000000000002',
+      slug: 'understanding-credibility-scores',
+      difficulty: 'intermediate',
+      category: 'source_credibility',
+      estimatedMinutes: 7,
+      orderIndex: 2,
+    ),
+  ];
+
+  static Lesson? _findLesson(String idOrSlug) {
+    for (final lesson in _seed) {
+      if (lesson.id == idOrSlug || lesson.slug == idOrSlug) return lesson;
+    }
+    return null;
+  }
+
+  /// Content keyed by (slug, locale); mirrors the seed migration — the
+  /// first lesson has a pt variant, everything else falls back to en.
+  static const Map<String, Map<String, _LessonContent>> _content = {
+    'spotting-misinformation': {
+      'en': _LessonContent(
+        locale: 'en',
+        title: 'Spotting Misinformation',
+        summary:
+            'Learn to recognize the common patterns behind misleading content.',
+        sections: [
+          LessonSection(
+            heading: 'Why misinformation spreads',
+            body:
+                'Misinformation spreads faster than corrections because it is designed to be shared.',
+            bullets: [
+              'Emotional headlines are a red flag',
+              'Check before you share',
+            ],
+          ),
+          LessonSection(
+            heading: 'The five-question check',
+            body:
+                'Before trusting a post, ask who published it and what evidence it carries.',
+          ),
+        ],
+      ),
+      'pt': _LessonContent(
+        locale: 'pt',
+        title: 'Como Detectar Desinformação',
+        summary:
+            'Aprenda a reconhecer os padrões comuns por trás de conteúdos enganosos.',
+        sections: [
+          LessonSection(
+            heading: 'Por que a desinformação se espalha',
+            body: 'A desinformação se espalha mais rápido que correções.',
+            bullets: ['Títulos emocionais são um sinal de alerta'],
+          ),
+        ],
+      ),
+    },
+    'understanding-credibility-scores': {
+      'en': _LessonContent(
+        locale: 'en',
+        title: 'Understanding Credibility Scores',
+        summary: 'How ANNEX scores sources and what the numbers mean.',
+        sections: [
+          LessonSection(
+            heading: 'What a credibility score is',
+            body:
+                'A credibility score estimates how trustworthy a publisher is.',
+          ),
+        ],
+      ),
+    },
+  };
+
+  static _LessonContent _localized(Lesson lesson, String locale) {
+    final byLocale = _content[lesson.slug] ?? const {};
+    return byLocale[locale] ?? byLocale['en'] ?? const _LessonContent();
+  }
+
+  @override
   Future<LocaleList> fetchLocales() async {
     return const LocaleList(
       defaultLocale: 'en',
@@ -115,6 +261,17 @@ class MockAnalysisApi implements AnalysisApi {
 
   @override
   Future<TranslationBundle> fetchBundle(String locale) async {
+    // Localized lesson UI strings (mirrors the backend seed migration).
+    final ownLessons = locale == 'pt'
+        ? const <String, BundleEntry>{
+            'lessons.title': BundleEntry(value: 'Lições', plural: 'none'),
+            'lessons.complete': BundleEntry(value: 'Concluir', plural: 'none'),
+            'lessons.completed': BundleEntry(
+              value: 'Concluído',
+              plural: 'none',
+            ),
+          }
+        : const <String, BundleEntry>{};
     const shared = {
       'common.cancel': BundleEntry(value: 'Cancel', plural: 'none'),
       'common.retry': BundleEntry(value: 'Retry', plural: 'none'),
@@ -142,6 +299,31 @@ class MockAnalysisApi implements AnalysisApi {
       ),
       'analysis.input_hint': BundleEntry(
         value: 'Paste text to verify…',
+        plural: 'none',
+      ),
+      'lessons.title': BundleEntry(value: 'Lessons', plural: 'none'),
+      'lessons.complete': BundleEntry(value: 'Mark complete', plural: 'none'),
+      'lessons.completed': BundleEntry(value: 'Completed', plural: 'none'),
+      'lessons.minutes': BundleEntry(value: '{minutes} min', plural: 'other'),
+      'lessons.difficulty': BundleEntry(value: 'Difficulty', plural: 'none'),
+      'lessons.difficulty_beginner': BundleEntry(
+        value: 'Beginner',
+        plural: 'none',
+      ),
+      'lessons.difficulty_intermediate': BundleEntry(
+        value: 'Intermediate',
+        plural: 'none',
+      ),
+      'lessons.difficulty_advanced': BundleEntry(
+        value: 'Advanced',
+        plural: 'none',
+      ),
+      'lessons.empty': BundleEntry(
+        value: 'No lessons available yet.',
+        plural: 'none',
+      ),
+      'lessons.error': BundleEntry(
+        value: 'Could not load lessons.',
         plural: 'none',
       ),
       'auth.sign_in': BundleEntry(value: 'Sign in', plural: 'none'),
@@ -183,7 +365,7 @@ class MockAnalysisApi implements AnalysisApi {
             'common.cancel': BundleEntry(value: 'Cancelar', plural: 'none'),
             'analysis.submit': BundleEntry(value: 'Analizar', plural: 'none'),
           };
-    final merged = <String, BundleEntry>{...shared, ...own};
+    final merged = <String, BundleEntry>{...shared, ...ownLessons, ...own};
     return TranslationBundle(
       locale: locale,
       fallbackLocale: 'en',
@@ -191,4 +373,19 @@ class MockAnalysisApi implements AnalysisApi {
       entries: Map.unmodifiable(merged),
     );
   }
+}
+
+/// Localized lesson content for the mock seed (mirrors `lesson_contents`).
+class _LessonContent {
+  const _LessonContent({
+    this.locale = 'en',
+    this.title = '',
+    this.summary = '',
+    this.sections = const [],
+  });
+
+  final String locale;
+  final String title;
+  final String summary;
+  final List<LessonSection> sections;
 }

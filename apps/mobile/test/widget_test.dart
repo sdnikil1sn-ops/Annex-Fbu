@@ -79,4 +79,38 @@ void main() {
     expect(find.text('The claim cites an outdated study'), findsOneWidget);
     expect(find.byType(ScoreMeter), findsOneWidget);
   });
+
+  testWidgets('lessons tab lists the curriculum and completes a lesson', (
+    tester,
+  ) async {
+    final services = _buildServices();
+    addTearDown(services.authController.dispose);
+    addTearDown(services.i18n.dispose);
+    addTearDown(services.settings.dispose);
+    await services.i18n.load();
+    await services.authController.signInAnonymously();
+
+    await tester.pumpWidget(_wrap(services));
+    await tester.pumpAndSettle();
+
+    // Switch to the Lessons tab and browse the seeded curriculum.
+    await tester.tap(find.text('Lessons'));
+    await tester.pumpAndSettle();
+    expect(find.text('Spotting Misinformation'), findsOneWidget);
+
+    // Open the first lesson and complete it.
+    await tester.tap(find.text('Spotting Misinformation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Why misinformation spreads'), findsOneWidget);
+
+    // The completion button sits below the fold on small viewports.
+    await tester.scrollUntilVisible(
+      find.text('Mark complete'),
+      100,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Mark complete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Completed'), findsWidgets);
+  });
 }

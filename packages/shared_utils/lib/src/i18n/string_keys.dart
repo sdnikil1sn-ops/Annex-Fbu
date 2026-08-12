@@ -41,6 +41,19 @@ abstract final class StringKeys {
   static const authContinueGoogle = 'auth.continue_google';
   static const authGuestLabel = 'auth.guest_label';
 
+  // lessons (Phase 15/16)
+  static const lessonsTitle = 'lessons.title';
+  static const lessonsComplete = 'lessons.complete';
+  static const lessonsCompleted = 'lessons.completed';
+  static const lessonsMinutes = 'lessons.minutes';
+  static const lessonsDifficulty = 'lessons.difficulty';
+  static const lessonsDifficultyBeginner = 'lessons.difficulty_beginner';
+  static const lessonsDifficultyIntermediate =
+      'lessons.difficulty_intermediate';
+  static const lessonsDifficultyAdvanced = 'lessons.difficulty_advanced';
+  static const lessonsEmpty = 'lessons.empty';
+  static const lessonsError = 'lessons.error';
+
   // settings
   static const settingsTitle = 'settings.title';
   static const settingsLanguage = 'settings.language';
@@ -79,6 +92,16 @@ abstract final class StringKeys {
     authContinueGuest,
     authContinueGoogle,
     authGuestLabel,
+    lessonsTitle,
+    lessonsComplete,
+    lessonsCompleted,
+    lessonsMinutes,
+    lessonsDifficulty,
+    lessonsDifficultyBeginner,
+    lessonsDifficultyIntermediate,
+    lessonsDifficultyAdvanced,
+    lessonsEmpty,
+    lessonsError,
     settingsTitle,
     settingsLanguage,
     settingsTheme,

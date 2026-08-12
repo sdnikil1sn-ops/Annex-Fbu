@@ -104,4 +104,50 @@ void main() {
     expect(find.text('The claim cites an outdated study'), findsOneWidget);
     expect(find.byType(ScoreMeter), findsOneWidget);
   });
+
+  testWidgets('lessons tab lists the curriculum and completes a lesson', (
+    tester,
+  ) async {
+    final services = _buildServices();
+    addTearDown(services.authController.dispose);
+    addTearDown(services.i18n.dispose);
+    addTearDown(services.settings.dispose);
+    await services.i18n.load();
+    await services.authController.signInAnonymously();
+
+    await tester.binding.setSurfaceSize(const Size(480, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_wrap(services));
+    await tester.pumpAndSettle();
+
+    // The curriculum is prefetched; the mock serves two seeded lessons.
+    await tester.tap(find.text('Lessons'));
+    await tester.pumpAndSettle();
+    expect(find.text('Spotting Misinformation'), findsOneWidget);
+    expect(find.text('Understanding Credibility Scores'), findsOneWidget);
+
+    // Open the first lesson and complete it.
+    await tester.tap(find.text('Spotting Misinformation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Why misinformation spreads'), findsOneWidget);
+
+    // The completion button sits below the fold on narrow viewports. The
+    // web shell's IndexedStack keeps every page's scrollable alive, so
+    // scope the search to the lessons screen, then scroll past the bottom
+    // navigation bar so the button is fully tappable.
+    final lessonsScrollable = find.descendant(
+      of: find.byType(LessonsScreen),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Mark complete'),
+      100,
+      scrollable: lessonsScrollable,
+    );
+    await tester.drag(lessonsScrollable, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark complete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Completed'), findsWidgets);
+  });
 }

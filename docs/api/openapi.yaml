@@ -400,17 +400,43 @@ paths:
       tags:
       - lessons
       summary: List Lessons
-      description: Return the published curriculum, localized for the caller.
+      description: 'Return the published curriculum, localized for the caller.
+
+
+        The optional ``locale`` query parameter overrides the caller''s
+
+        profile locale so clients can preview content in another language
+
+        (the resolved content falls back through the locale chain, ADR-0007).'
       operationId: list_lessons_api_v1_lessons_get
+      parameters:
+      - name: locale
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 2
+            maxLength: 35
+          - type: 'null'
+          description: 'Content locale override (default: profile locale).'
+          title: Locale
+        description: 'Content locale override (default: profile locale).'
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                additionalProperties: true
                 type: object
+                additionalProperties: true
                 title: Response List Lessons Api V1 Lessons Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/lessons/{lesson_ref}:
     get:
       tags:
@@ -423,7 +449,9 @@ paths:
 
         (e.g. ``spotting-misinformation``), so clients can deep-link with
 
-        human-readable URLs.'
+        human-readable URLs. The optional ``locale`` query parameter
+
+        overrides the caller''s profile locale.'
       operationId: get_lesson_api_v1_lessons__lesson_ref__get
       parameters:
       - name: lesson_ref
@@ -433,6 +461,18 @@ paths:
           type: string
           pattern: '[0-9a-f-]{36}|[a-z0-9-]{1,100}'
           title: Lesson Ref
+      - name: locale
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 2
+            maxLength: 35
+          - type: 'null'
+          description: 'Content locale override (default: profile locale).'
+          title: Locale
+        description: 'Content locale override (default: profile locale).'
       responses:
         '200':
           description: Successful Response
@@ -463,6 +503,18 @@ paths:
           type: string
           pattern: '[0-9a-f-]{36}|[a-z0-9-]{1,100}'
           title: Lesson Ref
+      - name: locale
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 2
+            maxLength: 35
+          - type: 'null'
+          description: 'Content locale override (default: profile locale).'
+          title: Locale
+        description: 'Content locale override (default: profile locale).'
       responses:
         '200':
           description: Successful Response

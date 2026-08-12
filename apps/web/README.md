@@ -48,6 +48,9 @@ platform-specific shell, theming, and entry-point code.
   `packages/shared_features`, responsive `WebShell`, PWA manifest + icons,
   Firebase Hosting config (`firebase.json`/`.firebaserc`), widget tests, and the
   `deploy-web` CI job that ships `build/web` on release tags.
+- **Phase 16 (done):** lessons curriculum surfaced — the education flow
+  (localized lesson list with progress, content detail, idempotent
+  completion) ships from `shared_features` as a rail/nav destination.
 
 Run it: `flutter run -d chrome` (debug builds use the mock API; point at the real
 backend with `--dart-define=ANNEX_API_URL=... --dart-define=ANNEX_USE_MOCK=false`).

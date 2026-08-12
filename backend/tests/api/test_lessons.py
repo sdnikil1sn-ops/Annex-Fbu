@@ -173,6 +173,31 @@ def test_complete_missing_lesson_is_404(
     assert response.json()["error"]["code"] == "lesson.not_found"
 
 
+def test_lessons_locale_query_overrides_profile(
+    settings, token_verifier, user_service
+) -> None:
+    """The locale query parameter overrides the caller's profile locale."""
+    app = _build(settings, token_verifier, user_service)  # profile locale: en
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get(
+            "/api/v1/lessons", headers=_headers(), params={"locale": "pt"}
+        )
+    assert response.status_code == 200
+    lessons = response.json()["data"]
+    # The pt variant exists for the first lesson, so it must win.
+    assert lessons[0]["title"] == "Como Detectar Desinformação"
+
+    # And the detail endpoint honors it too.
+    with TestClient(app, raise_server_exceptions=False) as client:
+        detail = client.get(
+            f"/api/v1/lessons/{lessons[0]['id']}",
+            headers=_headers(),
+            params={"locale": "pt"},
+        )
+    assert detail.status_code == 200
+    assert detail.json()["data"]["locale"] == "pt"
+
+
 def test_lessons_not_configured_returns_503(authed_client: TestClient) -> None:
     """Without a wired education service, the endpoints answer 503."""
     response = authed_client.get("/api/v1/lessons", headers=_headers())

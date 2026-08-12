@@ -11,6 +11,7 @@ import 'package:flutter/widgets.dart';
 import '../api/analysis_api.dart';
 import '../features/analysis/analysis_controller.dart';
 import '../features/auth/auth_controller.dart';
+import '../features/lessons/lessons_controller.dart';
 import '../features/settings/settings_controller.dart';
 import '../i18n/i18n_controller.dart';
 
@@ -30,6 +31,9 @@ class AppServices {
 
   /// A fresh analysis controller bound to the app's API.
   AnalysisController analysisController() => AnalysisController(api: api);
+
+  /// A fresh lessons controller bound to the app's API.
+  LessonsController lessonsController() => LessonsController(api: api);
 }
 
 /// Inherited widget exposing [AppServices] to the widget tree.

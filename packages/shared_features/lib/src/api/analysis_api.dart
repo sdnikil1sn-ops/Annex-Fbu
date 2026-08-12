@@ -35,6 +35,17 @@ abstract interface class AnalysisApi {
 
   /// A resolved translation bundle for a locale.
   Future<TranslationBundle> fetchBundle(String locale);
+
+  /// The published curriculum, localized for [locale], with per-user
+  /// completion progress.
+  Future<List<Lesson>> fetchLessons({String locale = 'en'});
+
+  /// One lesson by UUID or stable slug, with localized content and
+  /// sections (Phase 15).
+  Future<Lesson> fetchLesson(String idOrSlug, {String locale = 'en'});
+
+  /// Mark a lesson complete (idempotent; the first completion wins).
+  Future<LessonProgress> completeLesson(String idOrSlug);
 }
 
 /// HTTP implementation against the v1 backend API.
@@ -106,6 +117,47 @@ class HttpAnalysisApi implements AnalysisApi {
       );
     }
     return TranslationBundle.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  @override
+  Future<List<Lesson>> fetchLessons({String locale = 'en'}) async {
+    final json = await _get('/lessons?locale=$locale');
+    final data = json['data'];
+    if (data is! List) {
+      throw const ApiException(
+        'lessons.invalid_response',
+        'Malformed lessons response',
+      );
+    }
+    return data
+        .map((item) => Lesson.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
+  Future<Lesson> fetchLesson(String idOrSlug, {String locale = 'en'}) async {
+    final json = await _get('/lessons/$idOrSlug?locale=$locale');
+    final data = json['data'];
+    if (data is! Map) {
+      throw const ApiException(
+        'lessons.invalid_response',
+        'Malformed lesson response',
+      );
+    }
+    return Lesson.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  @override
+  Future<LessonProgress> completeLesson(String idOrSlug) async {
+    final json = await _post('/lessons/$idOrSlug/complete', const {});
+    final data = json['data'];
+    if (data is! Map) {
+      throw const ApiException(
+        'lessons.invalid_response',
+        'Malformed completion response',
+      );
+    }
+    return LessonProgress.fromJson(Map<String, dynamic>.from(data));
   }
 
   Future<Map<String, dynamic>> _get(String path) async {

@@ -101,8 +101,11 @@
 
 > `{id or slug}` accepts either the lesson UUID or its stable slug (e.g.
 > `spotting-misinformation`) so clients can deep-link with human-readable
-> URLs. Completing a lesson twice keeps the original timestamp (the first
-> completion wins). An unknown lesson reference answers `lesson.not_found`.
+> URLs. Content resolves through the caller's locale fallback chain; an
+> optional `?locale=` query parameter overrides the profile locale for all
+> three endpoints. Completing a lesson twice keeps the original timestamp
+> (the first completion wins). An unknown lesson reference answers
+> `lesson.not_found`.
 
 ## i18n
 

@@ -42,8 +42,15 @@ class _Root extends StatelessWidget {
     if (auth.user == null) {
       return const SignInScreen();
     }
-    return ChangeNotifierProvider<AnalysisController>(
-      create: (_) => AppScope.of(context).analysisController(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AnalysisController>(
+          create: (_) => AppScope.of(context).analysisController(),
+        ),
+        ChangeNotifierProvider<LessonsController>(
+          create: (_) => AppScope.of(context).lessonsController(),
+        ),
+      ],
       child: const WebShell(),
     );
   }
@@ -61,7 +68,11 @@ class WebShell extends StatefulWidget {
 class _WebShellState extends State<WebShell> {
   int _index = 0;
 
-  static const List<Widget> _pages = [AnalysisScreen(), SettingsScreen()];
+  static const List<Widget> _pages = [
+    AnalysisScreen(),
+    LessonsScreen(),
+    SettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +125,11 @@ class _WideShell extends StatelessWidget {
                 label: Text(i18n.t(StringKeys.analysisTitle)),
               ),
               NavigationRailDestination(
+                icon: const Icon(Icons.menu_book_outlined),
+                selectedIcon: const Icon(Icons.menu_book),
+                label: Text(i18n.t(StringKeys.lessonsTitle)),
+              ),
+              NavigationRailDestination(
                 icon: const Icon(Icons.settings_outlined),
                 selectedIcon: const Icon(Icons.settings),
                 label: Text(i18n.t(StringKeys.settingsTitle)),
@@ -154,6 +170,11 @@ class _NarrowShell extends StatelessWidget {
             icon: const Icon(Icons.analytics_outlined),
             selectedIcon: const Icon(Icons.analytics),
             label: i18n.t(StringKeys.analysisTitle),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.menu_book_outlined),
+            selectedIcon: const Icon(Icons.menu_book),
+            label: i18n.t(StringKeys.lessonsTitle),
           ),
           NavigationDestination(
             icon: const Icon(Icons.settings_outlined),

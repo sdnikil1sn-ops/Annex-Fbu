@@ -404,6 +404,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     API tests (auth, localization, completion), and repository
     integration tests (242 backend tests total).
 
+- **Lessons in the Flutter apps — web + mobile (Phase 16).**
+  - `packages/shared_models`: new `Lesson` / `LessonSection` /
+    `LessonProgress` models mirroring the Phase 15 backend contract,
+    with strict JSON round-trip tests.
+  - `packages/shared_utils`: new typed `StringKeys` for the curriculum
+    chrome (tab title, mark-complete, completed, minutes template,
+    difficulty names, empty/error) plus a backend i18n seed migration
+    (`20260812000007_lesson_i18n.sql`) so the UI strings localize
+    through the runtime bundles (ADR-0007).
+  - `packages/shared_features`: the `AnalysisApi` interface gains
+    `fetchLessons` / `fetchLesson` / `completeLesson` (HTTP + mock); a
+    new `LessonsController` drives list/detail/completion with busy and
+    error state; a new `LessonsScreen` renders the curriculum list
+    (difficulty, minutes, progress) and a lesson detail (content
+    sections + idempotent completion).
+  - App shells: the web `WebShell` gains a Lessons destination (rail +
+    bottom nav) and the mobile `_MainShell` a third tab; both wire a
+    `LessonsController` provider and prefetch the curriculum per app
+    instance (reloading on locale change).
+  - Tests: controller unit tests (localization, completion sync, error
+    paths) and web/mobile widget tests covering the full browse → open
+    → complete flow (26 shared_models + 21 shared_features + 9 app
+    widget tests).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -427,6 +451,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/api/v1-endpoints.md` updated with the Phase 15 lessons contract
   (localized list/detail/complete, ``lesson.not_found``); `backend/README.md`
   documents the Phase 15 status; OpenAPI contract regenerated.
+- `apps/web/README.md` and `apps/mobile/README.md` updated with the
+  Phase 16 lessons feature status.
 
 ### Deprecated
 
