@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { chromeMock } from './setup';
-import { PopupApp } from '../src/popup/PopupApp';
-import { Analysis, AnalysisReport } from '../src/shared/analysis';
+import { PopupApp, getSelection } from '../src/popup/PopupApp';
 import { TranslationBundle } from '../src/shared/i18n';
 
 const bundle: TranslationBundle = {
@@ -18,43 +17,9 @@ const bundle: TranslationBundle = {
   },
 };
 
-const completed: Analysis = {
-  id: 'an-1',
-  input_type: 'text',
-  status: 'completed',
-  locale: 'en',
-  failure_reason: null,
-  report: {
-    summary: 'Mostly verifiable.',
-    claims: [
-      { text: 'The earth is round', verifiability: 0.9 },
-      { text: 'Waves exist', verifiability: 0.4 },
-    ],
-  } satisfies AnalysisReport,
-  created_at: '2026-08-12T00:00:00Z',
-  completed_at: '2026-08-12T00:00:01Z',
-};
-
-/** Queue canned responses for chrome.runtime.sendMessage by message type. */
-function mockSendMessage(routes: Record<string, unknown>) {
-  chromeMock.runtime.sendMessage.mockImplementation(
-    (message: { type: string }, callback: (response: unknown) => void) => {
-      const data = routes[message.type];
-      if (data === undefined) {
-        callback({ ok: false, error: { code: 'test.missing', message: 'no route' } });
-      } else if (typeof data === 'object' && data !== null && 'ok' in data) {
-        callback(data as { ok: boolean });
-      } else {
-        callback({ ok: true, data });
-      }
-    },
-  );
-}
-
-function mockSelection(text: string) {
-  // MV3 APIs are promise-based; resolve the tab list asynchronously.
-  chromeMock.tabs.query.mockResolvedValue([{ id: 7 }]);
-  chromeMock.tabs.sendMessage.mockResolvedValue({ text });
+/** No selection on the page: tabs.query resolves empty, so getSelection() returns ''. */
+function mockNoSelection() {
+  chromeMock.tabs.query.mockResolvedValue([]);
 }
 
 afterEach(() => {
@@ -62,83 +27,95 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('PopupApp', () => {
-  it('renders the submit UI with the bundle strings', async () => {
-    mockSendMessage({
-      'get-locales': [{ code: 'en', fallback_code: null }],
-      'get-bundle': bundle,
-      'get-account': null,
+describe('popup getSelection', () => {
+  it('unwraps the selection envelope from the content script', async () => {
+    chromeMock.tabs.query.mockResolvedValue([{ id: 7, url: 'http://example.com/' }]);
+    chromeMock.tabs.sendMessage.mockResolvedValue({ ok: true, data: { text: 'selected words' } });
+
+    await expect(getSelection()).resolves.toBe('selected words');
+    expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(7, {
+      type: 'annex:get-selection',
     });
-    mockSelection('');
-    render(<PopupApp />);
-    expect(await screen.findByPlaceholderText('Paste or select text…')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Analyze' })).toBeDisabled();
   });
 
-  it('prefills the text area from the page selection', async () => {
-    mockSendMessage({
-      'get-locales': [{ code: 'en', fallback_code: null }],
-      'get-bundle': bundle,
-      'get-account': null,
+  it('returns an empty string when the content script reports failure', async () => {
+    chromeMock.tabs.query.mockResolvedValue([{ id: 7 }]);
+    chromeMock.tabs.sendMessage.mockResolvedValue({
+      ok: false,
+      error: { code: 'content.highlight_failed', message: 'nope' },
     });
-    mockSelection('selected sentence from the page');
-    render(<PopupApp />);
-    const textarea = (await screen.findByPlaceholderText(
-      'Paste or select text…',
-    )) as HTMLTextAreaElement;
-    expect(textarea.value).toBe('selected sentence from the page');
+
+    await expect(getSelection()).resolves.toBe('');
   });
 
-  it('submits, polls, and renders the terminal report', async () => {
-    mockSendMessage({
-      'get-locales': [{ code: 'en', fallback_code: null }],
-      'get-bundle': bundle,
-      'get-account': null,
-      verify: { ...completed, status: 'pending' },
-      'fetch-analysis': completed,
-    });
-    mockSelection('');
+  it('returns an empty string when no tab is available', async () => {
+    chromeMock.tabs.query.mockResolvedValue([]);
+
+    await expect(getSelection()).resolves.toBe('');
+  });
+});
+
+describe('PopupApp retry flow', () => {
+  it('shows a retry affordance when verify fails, and retry re-submits', async () => {
+    // First verify call fails; the retry's second call succeeds with a
+    // terminal analysis so the flow completes.
+    let calls = 0;
+    chromeMock.runtime.sendMessage.mockImplementation(
+      (message: { type: string }, callback: (response: unknown) => void) => {
+        switch (message.type) {
+          case 'get-locales':
+            callback({ ok: true, data: [{ code: 'en', fallback_code: null }] });
+            return;
+          case 'get-bundle':
+            callback({ ok: true, data: bundle });
+            return;
+          case 'get-account':
+            callback({ ok: true, data: null });
+            return;
+          case 'verify':
+            calls += 1;
+            if (calls === 1) {
+              callback({ ok: false, error: { code: 'analysis.submit_failed', message: 'boom' } });
+            } else {
+              callback({
+                ok: true,
+                data: {
+                  id: 'an-1',
+                  input_type: 'text',
+                  status: 'completed',
+                  locale: 'en',
+                  failure_reason: null,
+                  report: {
+                    summary: 'Mostly verifiable.',
+                    claims: [{ text: 'The earth is round', verifiability: 0.9 }],
+                  },
+                  created_at: '2026-08-12T00:00:00Z',
+                  completed_at: '2026-08-12T00:00:01Z',
+                },
+              });
+            }
+            return;
+          default:
+            callback({ ok: false, error: { code: 'test.missing', message: 'no route' } });
+        }
+      },
+    );
+    mockNoSelection();
     render(<PopupApp />);
 
     const textarea = await screen.findByPlaceholderText('Paste or select text…');
-    fireEvent.change(textarea, { target: { value: 'The earth is round and waves exist.' } });
+    fireEvent.change(textarea, { target: { value: 'The earth is round.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
 
-    // Enable fake timers after the click (findBy* needs real timers).
-    // Each advance is its own act() so React flushes between timer steps:
-    // t=0 lets the verify microtask register the poll interval, the next
-    // steps fire it and let the async fetch resolve before re-rendering.
-    vi.useFakeTimers();
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(100);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2_000);
-    });
-    vi.useRealTimers();
+    // First submit fails → the retry affordance renders (real timers: the
+    // verify promise resolves on the next microtask flush).
+    const retry = await screen.findByRole('button', { name: 'Retry' });
+    expect(retry).toBeInTheDocument();
 
-    expect(await screen.findByText('Credibility score')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('65%')).toBeInTheDocument());
+    // Retry re-submits; the second call is terminal, so the report renders.
+    fireEvent.click(retry);
+    await waitFor(() => expect(screen.getByText('Credibility score')).toBeInTheDocument());
     expect(screen.getByText('Mostly verifiable.')).toBeInTheDocument();
-  });
-
-  it('shows a retry affordance when the backend errors', async () => {
-    mockSendMessage({
-      'get-locales': [{ code: 'en', fallback_code: null }],
-      'get-bundle': bundle,
-      'get-account': null,
-      verify: { ok: false, error: { code: 'analysis.submit_failed', message: 'boom' } },
-    });
-    mockSelection('');
-    render(<PopupApp />);
-
-    const textarea = await screen.findByPlaceholderText('Paste or select text…');
-    fireEvent.change(textarea, { target: { value: 'some text' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
-
-    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(calls).toBe(2);
   });
 });

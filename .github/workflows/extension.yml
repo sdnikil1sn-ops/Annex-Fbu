@@ -30,6 +30,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/extension
+        # PUPPETEER_SKIP_DOWNLOAD: the e2e harness (scripts/e2e.mjs) is run
+        # manually with Chrome for Testing; CI only needs the unit-test
+        # packages and must not download a ~170 MB browser on every run.
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci
 
       - name: Typecheck

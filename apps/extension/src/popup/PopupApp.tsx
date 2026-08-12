@@ -17,7 +17,7 @@ type FlowState =
   | { phase: 'error'; message: string };
 
 /** Ask the active tab's content script for the current selection. */
-async function getSelection(): Promise<string> {
+export async function getSelection(): Promise<string> {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   if (!tab?.id) return '';
@@ -25,7 +25,10 @@ async function getSelection(): Promise<string> {
     const response = await chrome.tabs.sendMessage(tab.id, {
       type: 'annex:get-selection',
     });
-    return typeof response?.text === 'string' ? response.text : '';
+    // The content bridge uses the standard envelope ({ ok, data }).
+    return response?.ok === true && typeof response.data?.text === 'string'
+      ? response.data.text
+      : '';
   } catch {
     return ''; // no content script on this page (e.g. chrome:// pages)
   }

@@ -104,6 +104,32 @@ describe('handleRequest', () => {
     expect(response.ok).toBe(false);
     if (!response.ok) expect(response.error.code).toBe('contracts.unknown_message');
   });
+
+  it('answers a missing payload with a structured error (no hung caller)', async () => {
+    const deps = makeDeps();
+    const response = await handleRequest(
+      { type: 'verify', requestId: 'test-1', payload: undefined as unknown as never },
+      deps,
+    );
+    expect(response.ok).toBe(false);
+    if (!response.ok) {
+      expect(response.error.code).toBe('contracts.missing_payload');
+      expect(deps.api.submitText).not.toHaveBeenCalled();
+    }
+  });
+
+  it('answers a non-object payload with a structured error (no crash on primitives)', async () => {
+    const deps = makeDeps();
+    for (const bad of [0, '', false, [], 'nope'] as never[]) {
+      const response = await handleRequest(
+        { type: 'verify', requestId: 'test-1', payload: bad },
+        deps,
+      );
+      expect(response.ok).toBe(false);
+      if (!response.ok) expect(response.error.code).toBe('contracts.missing_payload');
+    }
+    expect(deps.api.submitText).not.toHaveBeenCalled();
+  });
 });
 
 describe('setupBrowserExtension', () => {

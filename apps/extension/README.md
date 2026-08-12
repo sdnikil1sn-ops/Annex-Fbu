@@ -64,7 +64,22 @@ npm run lint      # eslint (flat config)
 npm run format    # prettier --write
 npm run typecheck # tsc --noEmit
 npm run build     # typecheck + icons + popup/options + background/content IIFE
+npm run e2e       # end-to-end harness (see below)
 ```
+
+### End-to-end harness
+
+`npm run e2e` loads the built `dist/` into **Chrome for Testing** via Puppeteer
+and drives the full verify-selection flow against a mock v1 backend on
+`localhost:8010` — selection bridge, context-menu marking, claim highlighting,
+background router + HTTP client (verify → poll → completed report), and the
+popup UI (13 checks). Run `npm run build` first; the harness needs the
+Puppeteer-managed Chrome (installed automatically with `npm install`, or point
+`PUPPETEER_EXECUTABLE_PATH` at any Chrome/Chromium binary).
+
+The mock port defaults to `8010` and must be listed in the built manifest's
+`host_permissions` (currently `8000` and `8010`) — the harness fails fast if
+`MOCK_PORT` is set to a port the extension cannot reach.
 
 The build emits a loadable unpacked extension in `dist/`:
 

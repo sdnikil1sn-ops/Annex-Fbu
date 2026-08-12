@@ -230,8 +230,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     programmatic PNG icon generation (``scripts/generate-icons.mjs``).
   - **Tests**: 33 Vitest tests across shared helpers, the highlighting
     engine (incl. malicious-payload + sanitization guards), the background
-    router (incl. context-menu wiring), and popup/options component flows
+    router (incl. context-menu wiring and missing-payload hardening), and
+    popup/options component flows (incl. selection-bridge unwrapping)
     — with a jsdom environment and a chrome API mock.
+  - **End-to-end harness** (``scripts/e2e.mjs``): loads the built
+    ``dist/`` into Chrome for Testing via Puppeteer (dev dependency; the
+    installed system Chrome blocks ``--load-extension`` on some machines)
+    and drives the full verify-selection flow against a mock v1 backend —
+    selection bridge, context-menu marking, claim highlighting, router +
+    HTTP client (verify → poll → completed report), and the popup UI. A
+    two-launch profile-seeding design exercises the worker's real startup
+    composition root (stored API URL) without ``chrome.runtime.reload()``,
+    whose worker-target reuse makes CDP re-attachment unreliable. 13
+    end-to-end checks.
   - ``.github/workflows/extension.yml`` — typecheck, lint, format, test,
     build, and dist-layout verification in CI.
 
@@ -250,7 +261,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Nothing yet.
+- **Popup selection pre-fill (Phase 10)**: the popup read
+  ``response.text`` from the content script's selection bridge, but the
+  bridge answers with the standard envelope (``{ ok, data: { text } }``),
+  so the page selection silently never pre-filled. The popup now unwraps
+  the envelope; regression tests added.
+- **Background router robustness (Phase 10)**: a message with a missing
+  payload crashed the handler, which skipped ``sendResponse`` and left the
+  caller's ``sendMessage`` promise hanging forever. The router now answers
+  malformed messages with ``contracts.missing_payload``.
 
 ### Security
 

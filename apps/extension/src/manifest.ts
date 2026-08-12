@@ -39,8 +39,13 @@ export const manifest: AnnexManifest = {
   },
   options_page: 'options.html',
   permissions: ['contextMenus', 'activeTab', 'storage'],
-  // The ANNEX backend API only — never broad web access.
-  host_permissions: ['http://localhost:8000/*', 'https://api.annex.app/*'],
+  // The ANNEX backend API only — never broad web access. localhost:8010 is
+  // the e2e harness's mock backend (8000 may be taken by other software).
+  host_permissions: [
+    'http://localhost:8000/*',
+    'http://localhost:8010/*',
+    'https://api.annex.app/*',
+  ],
   content_scripts: [
     {
       matches: ['<all_urls>'],

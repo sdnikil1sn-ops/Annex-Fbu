@@ -62,6 +62,21 @@ export async function handleRequest(
   message: RequestMessage,
   deps: BackgroundDeps,
 ): Promise<ReturnType<typeof success | typeof failure>> {
+  // A malformed message must never leave the caller's sendMessage promise
+  // hanging: respond with a structured error instead of throwing (an
+  // unhandled throw skips sendResponse and the sender never settles).
+  // Every message type carries a plain-object payload (bridge.ts always
+  // sends `{}` even for payload-less messages), so rejecting anything
+  // that is not a plain object covers null/undefined, primitives, and
+  // arrays alike.
+  if (
+    !message ||
+    message.payload === null ||
+    typeof message.payload !== 'object' ||
+    Array.isArray(message.payload)
+  ) {
+    return failure('contracts.missing_payload', 'Message is missing its payload.');
+  }
   switch (message.type) {
     case 'verify': {
       const { text, locale } = message.payload as VerifyRequest;
