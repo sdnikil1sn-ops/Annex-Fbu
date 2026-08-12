@@ -7,6 +7,7 @@ builds it from settings in the composition root.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import cast
 
 from openai import OpenAI
@@ -74,4 +75,5 @@ class OpenAIClaimAnalyzer(ClaimAnalyzer):
             raise GuardedPromptError("model returned non-JSON output") from exc
 
         validated = validate_structured_output(payload, required_fields=CLAIM_REQUIRED_FIELDS)
-        return parse_claims(validated)
+        # Stamp the provider + model so persisted verdicts are attributable.
+        return replace(parse_claims(validated), model=f"openai:{self._model}")

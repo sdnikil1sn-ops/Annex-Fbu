@@ -87,9 +87,26 @@ def test_run_analysis_completes_with_report(monkeypatch: pytest.MonkeyPatch) -> 
     fetched = service.get(created.analysis_id)
     assert fetched is not None
     assert fetched.status is AnalysisStatus.COMPLETED
+    # Phase 14: claims carry a verdict, rationale, and evidence.
     assert fetched.report == {
         "summary": "mock summary",
-        "claims": [{"text": "mock claim", "verifiability": 0.5}],
+        "claims": [
+            {
+                "text": "mock claim",
+                "verifiability": 0.5,
+                "verdict": "partially_verifiable",
+                "rationale": "Mock analyzer: verifiability 0.50 is mid-range.",
+                "evidence": [
+                    {
+                        "kind": "link",
+                        "url": "https://example.com/evidence",
+                        "quote": None,
+                        "snippet": None,
+                        "relevance": 0.5,
+                    }
+                ],
+            }
+        ],
     }
     assert analyzer.analyzed_texts == ["some text"]
 

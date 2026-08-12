@@ -350,6 +350,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     API submission/failure tests for all three input types, and worker
     media scenarios (143 backend + 18 Dart tests total).
 
+- **Claims & evidence, Sources & credibility, Media library (Phase 14).**
+  - Domain aggregates persisted into the already-migrated tables:
+    `Claim` + `Evidence` (verifiability verdict vocabulary matching the
+    schema CHECK constraint, `derive_verdict` fallback, normalized claim
+    text for stable matching), `Source` (credibility score + trust
+    signals), and `MediaItem` with `OcrRecord` / `ForensicsRecord`
+    children (`claims` / `claim_verdicts` / `evidence`,
+    `sources` / `source_scores`, `media_items` / `ocr_results` /
+    `forensics_reports`).
+  - AI contract extended: analyzers now emit per-claim verdicts, evidence
+    links, and their model name; prompt parsing handles the enriched
+    response shape, and both the OpenAI and Gemini adapters stamp the
+    model. `AnalysisService` persists the claim records (with evidence)
+    when an analysis completes.
+  - Application services (ADR-0003): `ClaimsService` (owner-scoped
+    reads), `SourceService` (public profile + search), `MediaService`
+    (image ingest → OCR + forensics persistence). Repository ports +
+    PostgreSQL implementations (psycopg, parameterized) and in-memory
+    mocks for all three aggregates.
+  - New endpoints: `GET /claims/{id}`, `GET /claims/{id}/evidence`,
+    `GET /sources/search`, `GET /sources/{domain}`, `POST /media`,
+    `GET /media/{id}` — with error codes `claim.not_found`,
+    `source.not_found`, `media.not_found`, `media.analysis_not_found`.
+  - Sources seed migration (`20260812000004_source_seed.sql`) with
+    representative publishers and credibility scores.
+  - Tests: unit (claims/media services), API (claims/sources/media),
+    integration (repository round-trips against real PostgreSQL), and
+    updated analyzer/service/task tests for the enriched contract
+    (225 backend + 19 Dart tests total).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -366,6 +396,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`analysis.fetch_failed` / `analysis.media_failed`), and the executable
   OpenAPI contract regenerated with the URL/image submit schema (ADR-0002);
   `backend/README.md` documents the Phase 13 media pipeline status.
+- `docs/api/v1-endpoints.md` updated with the Phase 14 claims/sources/media
+  endpoint contracts and error codes (multipart upload replaced by the
+  base64 JSON body, no separate analyze endpoint); `backend/README.md`
+  documents the Phase 14 status; OpenAPI contract regenerated.
 
 ### Deprecated
 

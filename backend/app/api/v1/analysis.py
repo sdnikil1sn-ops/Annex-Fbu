@@ -161,7 +161,7 @@ def _prepare_content(body: SubmitAnalysisRequest, settings: Settings) -> str:
                 "image is required for image input.",
                 status_code=400,
             )
-        return _normalize_image(body.image, settings.media_image_max_bytes)
+        return normalize_image(body.image, settings.media_image_max_bytes)
 
     raise AppError(
         "validation.invalid_input",
@@ -190,7 +190,7 @@ def _validate_url(url: str) -> None:
         )
 
 
-def _normalize_image(image: str, max_bytes: int) -> str:
+def normalize_image(image: str, max_bytes: int) -> str:
     """Strip a ``data:`` prefix if present and validate the base64 payload.
 
     Returns the canonical base64 string persisted as the analysis content.

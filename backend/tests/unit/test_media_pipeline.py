@@ -17,7 +17,7 @@ from app.application.ports.media import (
     OcrResult,
     UrlFetchError,
 )
-from app.application.services.media_pipeline import MediaPipeline, _guess_mime
+from app.application.services.media_pipeline import MediaPipeline, guess_mime
 from app.domain.analysis import Analysis, AnalysisInputType
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"fake-png-payload"
@@ -197,8 +197,8 @@ def test_url_input_propagates_fetch_error() -> None:
 
 def test_guess_mime_sniffs_common_formats() -> None:
     """The MIME sniffer recognizes PNG, JPEG, GIF, and WebP magic bytes."""
-    assert _guess_mime(b"\x89PNG\r\n\x1a\nrest") == "image/png"
-    assert _guess_mime(b"\xff\xd8\xffrest") == "image/jpeg"
-    assert _guess_mime(b"GIF89arest") == "image/gif"
-    assert _guess_mime(b"RIFF\x00\x00\x00\x00WEBP") == "image/webp"
-    assert _guess_mime(b"unknown") == "application/octet-stream"
+    assert guess_mime(b"\x89PNG\r\n\x1a\nrest") == "image/png"
+    assert guess_mime(b"\xff\xd8\xffrest") == "image/jpeg"
+    assert guess_mime(b"GIF89arest") == "image/gif"
+    assert guess_mime(b"RIFF\x00\x00\x00\x00WEBP") == "image/webp"
+    assert guess_mime(b"unknown") == "application/octet-stream"

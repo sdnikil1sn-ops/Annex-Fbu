@@ -7,6 +7,7 @@ provider is a configuration choice, not a code fork.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 from google import genai
 from google.genai import types as genai_types
@@ -74,4 +75,5 @@ class GeminiClaimAnalyzer(ClaimAnalyzer):
             raise GuardedPromptError("model returned non-JSON output") from exc
 
         validated = validate_structured_output(payload, required_fields=CLAIM_REQUIRED_FIELDS)
-        return parse_claims(validated)
+        # Stamp the provider + model so persisted verdicts are attributable.
+        return replace(parse_claims(validated), model=f"gemini:{self._model}")

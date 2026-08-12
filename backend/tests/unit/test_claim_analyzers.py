@@ -13,6 +13,7 @@ from app.application.ports.ai import (
     AnalysisProviderError,
     ClaimAnalysis,
     ClaimItem,
+    EvidenceItem,
 )
 from app.infrastructure.ai.gemini_claim_analyzer import GeminiClaimAnalyzer
 from app.infrastructure.ai.mock_claim_analyzer import MockClaimAnalyzer
@@ -24,7 +25,30 @@ from app.infrastructure.ai.prompt_guard import (
 )
 
 VALID_JSON = json.dumps(
-    {"claims": [{"text": "Claim one", "verifiability": 0.8}], "summary": "A summary."}
+    {
+        "claims": [
+            {
+                "text": "Claim one",
+                "verifiability": 0.8,
+                "verdict": "verifiable",
+                "rationale": "Well-sourced.",
+                "evidence": [
+                    {"kind": "link", "url": "https://example.com/src", "relevance": 0.9}
+                ],
+            }
+        ],
+        "summary": "A summary.",
+    }
+)
+
+EXPECTED_CLAIM = ClaimItem(
+    text="Claim one",
+    verifiability=0.8,
+    verdict="verifiable",
+    rationale="Well-sourced.",
+    evidence=(
+        EvidenceItem(kind="link", url="https://example.com/src", relevance=0.9),
+    ),
 )
 
 
@@ -98,8 +122,22 @@ def test_openai_returns_typed_analysis() -> None:
     adapter, fake = make_openai()
     result = adapter.analyze("Some text to analyze.")
     assert isinstance(result, ClaimAnalysis)
-    assert result.claims == [ClaimItem(text="Claim one", verifiability=0.8)]
+    assert result.claims == [EXPECTED_CLAIM]
     assert result.summary == "A summary."
+    # The provider + model are stamped so persisted verdicts are attributable.
+    assert result.model == "openai:gpt-4o-mini"
+
+
+def test_openai_derives_verdict_when_missing() -> None:
+    """A claim without a verdict degrades to the score-derived label."""
+    payload = json.dumps(
+        {"claims": [{"text": "c", "verifiability": 0.3}], "summary": "s"}
+    )
+    adapter, _ = make_openai(content=payload)
+    result = adapter.analyze("text")
+    assert result.claims[0].verdict == "unverifiable"
+    assert result.claims[0].rationale == ""
+    assert result.claims[0].evidence == ()
 
 
 def test_openai_sends_guarded_prompt() -> None:
@@ -189,8 +227,9 @@ def test_gemini_returns_typed_analysis() -> None:
     adapter, _ = make_gemini()
     result = adapter.analyze("Some text.")
     assert isinstance(result, ClaimAnalysis)
-    assert result.claims == [ClaimItem(text="Claim one", verifiability=0.8)]
+    assert result.claims == [EXPECTED_CLAIM]
     assert result.summary == "A summary."
+    assert result.model == "gemini:gemini-2.5-flash"
 
 
 def test_gemini_sends_system_instruction_and_guarded_content() -> None:

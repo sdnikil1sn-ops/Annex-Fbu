@@ -87,3 +87,11 @@ backend/
   with ``analysis.fetch_failed`` / ``analysis.media_failed``. New
   settings: ``MEDIA_FETCH_TIMEOUT``, ``MEDIA_FETCH_MAX_BYTES``,
   ``MEDIA_IMAGE_MAX_BYTES`` (143 backend tests).
+- **Phase 14 (done):** Claims & evidence, Sources & credibility, and the
+  Media library. Analyzers now emit per-claim verdicts, evidence links,
+  and their model; ``AnalysisService`` persists claims when an analysis
+  completes. New services/repositories (PostgreSQL + mocks) and
+  endpoints: ``GET /claims/{id}`` (+ ``/evidence``), ``GET /sources``
+  (search + profile, public-read), ``POST /media`` (base64 image → OCR +
+  forensics) and ``GET /media/{id}``. Sources seed migration
+  (``20260812000004_source_seed.sql``). 225 backend tests.

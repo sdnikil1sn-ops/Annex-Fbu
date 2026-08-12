@@ -115,9 +115,26 @@ def test_analyze_text_completes_with_report(service: AnalysisService) -> None:
     analyzer = MockClaimAnalyzer()
     analysis = service.analyze_text("some text", analyzer=analyzer)
     assert analysis.status is AnalysisStatus.COMPLETED
+    # Phase 14: claims carry a verdict, rationale, and evidence.
     assert analysis.report == {
         "summary": "mock summary",
-        "claims": [{"text": "mock claim", "verifiability": 0.5}],
+        "claims": [
+            {
+                "text": "mock claim",
+                "verifiability": 0.5,
+                "verdict": "partially_verifiable",
+                "rationale": "Mock analyzer: verifiability 0.50 is mid-range.",
+                "evidence": [
+                    {
+                        "kind": "link",
+                        "url": "https://example.com/evidence",
+                        "quote": None,
+                        "snippet": None,
+                        "relevance": 0.5,
+                    }
+                ],
+            }
+        ],
     }
     assert analyzer.analyzed_texts == ["some text"]
     assert service.get(analysis.analysis_id).status is AnalysisStatus.COMPLETED
@@ -202,7 +219,18 @@ def test_complete_with_report_builds_report_shape(service: AnalysisService) -> N
 
     completed = service.complete_with_report(processing, result)
 
-    assert completed.report == {"summary": "s", "claims": [{"text": "c", "verifiability": 0.9}]}
+    assert completed.report == {
+        "summary": "s",
+        "claims": [
+            {
+                "text": "c",
+                "verifiability": 0.9,
+                "verdict": "unverifiable",
+                "rationale": "",
+                "evidence": [],
+            }
+        ],
+    }
     assert service.get(analysis.analysis_id).report == completed.report
 
 

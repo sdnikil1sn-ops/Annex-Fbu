@@ -12,7 +12,7 @@
 | Authentication | Firebase ID token in `Authorization: Bearer <token>`; verified server-side (ADR-0005) |
 | Anonymous access | Public endpoints are explicitly listed; everything else requires a verified token |
 | Response envelope | `{ "data": ..., "meta": {...} }` for success; `{ "error": { "code", "message", "request_id" } }` for failure |
-| Error codes | Machine-readable codes (`auth.expired_token`, `validation.invalid_input`, `validation.invalid_url`, `validation.invalid_image`, `analysis.not_found`, `analysis.fetch_failed`, `analysis.media_failed`, `rate.exceeded`, …) |
+| Error codes | Machine-readable codes (`auth.expired_token`, `validation.invalid_input`, `validation.invalid_url`, `validation.invalid_image`, `analysis.not_found`, `analysis.fetch_failed`, `analysis.media_failed`, `claim.not_found`, `source.not_found`, `media.not_found`, `media.analysis_not_found`, `rate.exceeded`, …) |
 | Pagination | Cursor-based: `?cursor=...&limit=50`; `meta.next_cursor` returned |
 | Idempotency | State-changing analysis endpoints accept `Idempotency-Key` headers |
 | Tracing | Every response includes `X-Request-ID`; log lines carry it |
@@ -57,6 +57,9 @@
 
 ## Claims
 
+> Implemented in Phase 14. Claims are persisted when their analysis
+> completes; reads are owner-scoped.
+
 | Method | Path | Auth | Rate limit | Purpose |
 |---|---|---|---|---|
 | GET | `/api/v1/claims/{id}` | owner | 120/min | Claim + verdict + evidence |
@@ -64,17 +67,23 @@
 
 ## Sources
 
+> Implemented in Phase 14. The publisher/domain registry is public-read
+> (RLS policy matrix); profiles carry the latest credibility score.
+
 | Method | Path | Auth | Rate limit | Purpose |
 |---|---|---|---|---|
-| GET | `/api/v1/sources/{domain}` | token or anon | 60/min | Source profile + credibility score |
-| GET | `/api/v1/sources/search?q=` | token or anon | 60/min | Search sources by name/domain |
+| GET | `/api/v1/sources/{domain}` | none | 60/min | Source profile + credibility score |
+| GET | `/api/v1/sources/search?q=` | none | 60/min | Search sources by name/domain |
 
 ## Media
 
+> Implemented in Phase 14. Images are submitted as base64 (or `data:` URL)
+> in a JSON body; OCR + forensics run synchronously during ingest. Reads
+> are owner-scoped through the owning analysis.
+
 | Method | Path | Auth | Rate limit | Purpose |
 |---|---|---|---|---|
-| POST | `/api/v1/media` | token or anon | 20/min | Upload image (multipart); returns signed URL + `media_id` |
-| POST | `/api/v1/media/{id}/analyze` | token or anon | 20/min | Enqueue OCR + forensics for an uploaded image |
+| POST | `/api/v1/media` | owner | 20/min | Ingest an image for an owned analysis; runs OCR + forensics; returns the media record |
 | GET | `/api/v1/media/{id}` | owner | 120/min | Media metadata + OCR + forensics report |
 
 ## Education
@@ -108,6 +117,19 @@ at `MEDIA_IMAGE_MAX_BYTES` (default 4 MB decoded). A refused URL fails the
 analysis with `analysis.fetch_failed`; an undecodable image fails with
 `analysis.media_failed` — both are FAILED states clients can surface, never
 5xx responses.
+
+## Submit contract for `POST /media`
+
+| Field | Notes |
+|---|---|
+| `analysis_id` | UUID of an analysis owned by the caller |
+| `image` | base64 or `data:` URL, same decoding rules as `POST /analysis` |
+
+The image is decoded (size-capped), then OCR (Tesseract) + tamper
+forensics (OpenCV) run synchronously during ingest; the 201 response
+carries the media record with its `ocr` and `forensics` children. A
+missing/foreign analysis fails with `media.analysis_not_found` (404); an
+undecodable image fails with `validation.invalid_image`.
 
 ## Status model for analyses
 

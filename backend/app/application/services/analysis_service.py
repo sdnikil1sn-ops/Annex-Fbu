@@ -16,6 +16,7 @@ from app.application.ports.ai import (
 from app.application.ports.media import MediaProcessingError, UrlFetchError
 from app.application.ports.repositories import AnalysisRepository, Cursor
 from app.application.ports.tasks import AnalysisTaskDispatcher
+from app.application.services.claims_service import ClaimsService
 from app.application.services.media_pipeline import MediaPipeline
 from app.core.exceptions import ConfigurationError
 from app.domain.analysis import (
@@ -31,11 +32,31 @@ logger = logging.getLogger(__name__)
 
 
 def _to_report(result: ClaimAnalysis) -> dict[str, Any]:
-    """Serialize a claim analysis into the persisted report shape."""
+    """Serialize a claim analysis into the persisted report shape.
+
+    Since Phase 14 each claim carries its verdict, rationale, and evidence
+    so the report is self-contained (clients need no second fetch); the
+    same data is also persisted to the claims tables by ``ClaimsService``.
+    """
     return {
         "summary": result.summary,
         "claims": [
-            {"text": claim.text, "verifiability": claim.verifiability}
+            {
+                "text": claim.text,
+                "verifiability": claim.verifiability,
+                "verdict": claim.verdict,
+                "rationale": claim.rationale,
+                "evidence": [
+                    {
+                        "kind": evidence.kind,
+                        "url": evidence.url,
+                        "quote": evidence.quote,
+                        "snippet": evidence.snippet,
+                        "relevance": evidence.relevance,
+                    }
+                    for evidence in claim.evidence
+                ],
+            }
             for claim in result.claims
         ],
     }
@@ -58,10 +79,12 @@ class AnalysisService:
         *,
         task_dispatcher: AnalysisTaskDispatcher | None = None,
         media_pipeline: MediaPipeline | None = None,
+        claims_service: ClaimsService | None = None,
     ) -> None:
         self._repository = repository
         self._task_dispatcher = task_dispatcher
         self._media_pipeline = media_pipeline
+        self._claims_service = claims_service
 
     def submit(
         self,
@@ -135,7 +158,12 @@ class AnalysisService:
             result: The claim-analysis output.
             media: Optional media context (Phase 13) merged into the report
                 — URL fetch metadata or OCR + forensics signals.
+
+        Claims are persisted first (Phase 14) so a completed analysis is
+        never missing its verdicts; the save is idempotent per analysis.
         """
+        if self._claims_service is not None:
+            self._claims_service.save_from_analysis(analysis, result)
         report = _to_report(result)
         if media is not None:
             report["media"] = media

@@ -14,7 +14,10 @@ from app.api.errors import AppError
 from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerificationError, TokenVerifier
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.claims_service import ClaimsService
 from app.application.services.i18n_service import I18nService
+from app.application.services.media_service import MediaService
+from app.application.services.source_service import SourceService
 from app.application.services.user_service import UserService
 from app.core.config import Settings
 from app.domain.user import User
@@ -57,6 +60,42 @@ def get_i18n_service_dep(request: Request) -> I18nService:
         raise AppError(
             "i18n.not_configured",
             "Translation delivery is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_claims_service_dep(request: Request) -> ClaimsService:
+    """Return the bound claims service, or 503 when it is not configured."""
+    service: ClaimsService | None = getattr(request.app.state, "claims_service", None)
+    if service is None:
+        raise AppError(
+            "claims.not_configured",
+            "Claims persistence is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_source_service_dep(request: Request) -> SourceService:
+    """Return the bound source service, or 503 when it is not configured."""
+    service: SourceService | None = getattr(request.app.state, "source_service", None)
+    if service is None:
+        raise AppError(
+            "sources.not_configured",
+            "The source registry is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_media_service_dep(request: Request) -> MediaService:
+    """Return the bound media service, or 503 when it is not configured."""
+    service: MediaService | None = getattr(request.app.state, "media_service", None)
+    if service is None:
+        raise AppError(
+            "media.not_configured",
+            "Media processing is not configured on this server.",
             status_code=503,
         )
     return service

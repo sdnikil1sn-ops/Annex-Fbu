@@ -30,6 +30,7 @@ from app.application.ports.ai import (
 from app.application.ports.media import MediaProcessingError, UrlFetchError
 from app.application.ports.repositories import AnalysisRepository
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.claims_service import ClaimsService
 from app.application.services.media_pipeline import MediaPipeline
 from app.core.config import Settings, get_settings
 from app.core.exceptions import ConfigurationError
@@ -43,6 +44,7 @@ from app.domain.analysis import (
 from app.infrastructure.ai.factory import build_claim_analyzer
 from app.infrastructure.media.factory import build_media_pipeline
 from app.infrastructure.repositories.analysis_repository import PostgresAnalysisRepository
+from app.infrastructure.repositories.claim_repository import PostgresClaimRepository
 from app.infrastructure.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -54,15 +56,20 @@ def _worker_service(settings: Settings) -> AnalysisService:
     Workers are separate processes without ``app.state``, so dependencies
     are constructed here from settings: the PostgreSQL repository (the
     service role bypasses RLS for worker writes), the configured claim
-    analyzer (ADR-0006 provider selection), and the media pipeline
-    (Phase 13, cached per process like the analyzer).
+    analyzer (ADR-0006 provider selection), the media pipeline (Phase 13,
+    cached per process like the analyzer), and the claims service that
+    persists verdicts on completion (Phase 14).
     """
     if not settings.database_url:
         raise ConfigurationError(
             "DATABASE_URL is required to run the analysis worker"
         )
     repository: AnalysisRepository = PostgresAnalysisRepository(settings.database_url)
-    return AnalysisService(repository, media_pipeline=_get_media_pipeline())
+    return AnalysisService(
+        repository,
+        media_pipeline=_get_media_pipeline(),
+        claims_service=ClaimsService(PostgresClaimRepository(settings.database_url)),
+    )
 
 
 @celery_app.task(  # type: ignore[untyped-decorator]

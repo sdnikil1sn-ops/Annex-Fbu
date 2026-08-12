@@ -101,7 +101,7 @@ class MediaPipeline:
         context = {
             "input": {
                 "type": "image",
-                "mime": _guess_mime(image_bytes),
+                "mime": guess_mime(image_bytes),
                 "size_bytes": len(image_bytes),
             },
             "ocr": {
@@ -116,8 +116,12 @@ class MediaPipeline:
         return ocr_result.text, context
 
 
-def _guess_mime(image_bytes: bytes) -> str:
-    """Sniff a small MIME type from the image magic bytes (best effort)."""
+def guess_mime(image_bytes: bytes) -> str:
+    """Sniff a small MIME type from the image magic bytes (best effort).
+
+    Public so the media service (Phase 14) reuses the same sniffing for
+    its persisted ``media_items.mime`` column.
+    """
     if image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
     if image_bytes.startswith(b"\xff\xd8\xff"):

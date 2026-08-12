@@ -19,8 +19,11 @@ from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerifier
 from app.application.ports.media import ForensicsAdapter, OcrAdapter
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.claims_service import ClaimsService
 from app.application.services.i18n_service import I18nService
 from app.application.services.media_pipeline import MediaPipeline
+from app.application.services.media_service import MediaService
+from app.application.services.source_service import SourceService
 from app.application.services.user_service import UserService
 from app.core.checks import DatabaseHealthCheck, DependencyCheck, RedisHealthCheck
 from app.core.config import Settings, get_settings
@@ -37,7 +40,10 @@ from app.infrastructure.rate_limit.factory import build_rate_limiter
 from app.infrastructure.rate_limit.limiter import RateLimiter
 from app.infrastructure.rate_limit.middleware import RateLimitMiddleware
 from app.infrastructure.repositories.analysis_repository import PostgresAnalysisRepository
+from app.infrastructure.repositories.claim_repository import PostgresClaimRepository
 from app.infrastructure.repositories.i18n_repository import PostgresI18nRepository
+from app.infrastructure.repositories.media_repository import PostgresMediaRepository
+from app.infrastructure.repositories.source_repository import PostgresSourceRepository
 from app.infrastructure.repositories.user_repository import PostgresUserRepository
 from app.infrastructure.tasks.dispatcher import build_analysis_task_dispatcher
 
@@ -52,6 +58,9 @@ def create_app(
     forensics_adapter: ForensicsAdapter | None = None,
     media_pipeline: MediaPipeline | None = None,
     analysis_service: AnalysisService | None = None,
+    claims_service: ClaimsService | None = None,
+    source_service: SourceService | None = None,
+    media_service: MediaService | None = None,
     i18n_service: I18nService | None = None,
     rate_limiter: RateLimiter | None = None,
 ) -> FastAPI:
@@ -77,6 +86,15 @@ def create_app(
             in-memory repository); defaults to the PostgreSQL-backed service
             when a database is configured, enqueuing work on the Celery
             worker when a broker is configured (ADR-0008).
+        claims_service: Optional claims service override (tests use the
+            in-memory repository); defaults to the PostgreSQL-backed service
+            when a database is configured (Phase 14).
+        source_service: Optional source service override; defaults to the
+            PostgreSQL-backed service when a database is configured
+            (Phase 14).
+        media_service: Optional media service override; defaults to the
+            PostgreSQL-backed service bound to the media adapters when a
+            database is configured (Phase 14).
         i18n_service: Optional i18n service override (tests use the
             in-memory repository); defaults to the PostgreSQL-backed service
             when a database is configured (ADR-0007).
@@ -153,8 +171,30 @@ def create_app(
             PostgresAnalysisRepository(settings.database_url),
             task_dispatcher=task_dispatcher,
             media_pipeline=app.state.media_pipeline,
+            claims_service=ClaimsService(
+                PostgresClaimRepository(settings.database_url)
+            ),
         )
     app.state.analysis_service = analysis_service
+
+    # Phase 14 domain services: claims (persisted from completed analyses),
+    # the public sources registry, and the media library. Each defaults to
+    # the PostgreSQL-backed service when a database is configured.
+    if claims_service is None and settings.database_url:
+        claims_service = ClaimsService(
+            PostgresClaimRepository(settings.database_url)
+        )
+    app.state.claims_service = claims_service
+    if source_service is None and settings.database_url:
+        source_service = SourceService(PostgresSourceRepository(settings.database_url))
+    app.state.source_service = source_service
+    if media_service is None and settings.database_url:
+        media_service = MediaService(
+            PostgresMediaRepository(settings.database_url),
+            ocr_adapter=app.state.ocr_adapter,
+            forensics_adapter=app.state.forensics_adapter,
+        )
+    app.state.media_service = media_service
 
     # Runtime i18n (Phase 8, ADR-0007): serve enabled locales and
     # versioned translation bundles from the configured database unless

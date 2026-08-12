@@ -12,11 +12,25 @@ from typing import Protocol
 
 
 @dataclass(frozen=True)
+class EvidenceItem:
+    """One piece of evidence supporting a claim verdict."""
+
+    kind: str  # link | quote | source
+    url: str | None = None
+    quote: str | None = None
+    snippet: str | None = None
+    relevance: float | None = None
+
+
+@dataclass(frozen=True)
 class ClaimItem:
-    """One extracted claim with its verifiability score."""
+    """One extracted claim with its verifiability score and verdict."""
 
     text: str
     verifiability: float
+    verdict: str = "unverifiable"
+    rationale: str = ""
+    evidence: tuple[EvidenceItem, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -25,6 +39,7 @@ class ClaimAnalysis:
 
     claims: list[ClaimItem]
     summary: str
+    model: str = ""
 
 
 class AnalysisProviderError(Exception):

@@ -81,7 +81,24 @@ def test_submit_text_returns_202_with_report(authed_client: TestClient) -> None:
     assert data["status"] == "completed"
     assert data["input_type"] == "text"
     assert data["report"]["summary"] == "mock summary"
-    assert data["report"]["claims"] == [{"text": "mock claim", "verifiability": 0.5}]
+    # Phase 14: claims carry a verdict, rationale, and evidence.
+    assert data["report"]["claims"] == [
+        {
+            "text": "mock claim",
+            "verifiability": 0.5,
+            "verdict": "partially_verifiable",
+            "rationale": "Mock analyzer: verifiability 0.50 is mid-range.",
+            "evidence": [
+                {
+                    "kind": "link",
+                    "url": "https://example.com/evidence",
+                    "quote": None,
+                    "snippet": None,
+                    "relevance": 0.5,
+                }
+            ],
+        }
+    ]
     assert data["completed_at"] is not None
 
 

@@ -207,6 +207,194 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/claims/{claim_id}:
+    get:
+      tags:
+      - claims
+      summary: Get Claim
+      description: Fetch one claim with its verdict and rationale (owner only).
+      operationId: get_claim_api_v1_claims__claim_id__get
+      parameters:
+      - name: claim_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Claim Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Claim Api V1 Claims  Claim Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/claims/{claim_id}/evidence:
+    get:
+      tags:
+      - claims
+      summary: Get Claim Evidence
+      description: Fetch the evidence links supporting a claim's verdict (owner only).
+      operationId: get_claim_evidence_api_v1_claims__claim_id__evidence_get
+      parameters:
+      - name: claim_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Claim Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Claim Evidence Api V1 Claims  Claim Id  Evidence
+                  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/sources/search:
+    get:
+      tags:
+      - sources
+      summary: Search Sources
+      description: Search sources by domain or name (case-insensitive substring).
+      operationId: search_sources_api_v1_sources_search_get
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 2
+          maxLength: 100
+          title: Q
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 20
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Search Sources Api V1 Sources Search Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/sources/{domain}:
+    get:
+      tags:
+      - sources
+      summary: Get Source
+      description: Fetch one source profile with its credibility score.
+      operationId: get_source_api_v1_sources__domain__get
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Domain
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Source Api V1 Sources  Domain  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/media:
+    post:
+      tags:
+      - media
+      summary: Submit Media
+      description: Ingest an image for an owned analysis; returns the media record.
+      operationId: submit_media_api_v1_media_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitMediaRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Submit Media Api V1 Media Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/media/{media_id}:
+    get:
+      tags:
+      - media
+      summary: Get Media
+      description: Fetch one media record with OCR + forensics (owner only).
+      operationId: get_media_api_v1_media__media_id__get
+      parameters:
+      - name: media_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Media Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Media Api V1 Media  Media Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/i18n/locales:
     get:
       tags:
@@ -322,6 +510,21 @@ components:
         \ input — base64-encoded bytes or a ``data:`` URL;\n  validated at the API\
         \ boundary with a size cap, then OCR + forensics\n  (the MIME type is sniffed\
         \ from the bytes by the pipeline)."
+    SubmitMediaRequest:
+      properties:
+        analysis_id:
+          type: string
+          format: uuid
+          title: Analysis Id
+        image:
+          type: string
+          title: Image
+      type: object
+      required:
+      - analysis_id
+      - image
+      title: SubmitMediaRequest
+      description: Body for ``POST /media``.
     ValidationError:
       properties:
         loc:
