@@ -12,13 +12,12 @@ integration and delivery pipeline.
 | `docker.yml` | Phase 7 | Build and scan container images |
 | `dart.yml` | Phase 8 | Format, analyze, test for pure-Dart packages (`shared_utils`) |
 | `flutter.yml` | Phase 9 | Format, analyze, test for Flutter app + packages |
+| `extension.yml` | Phase 10 | Typecheck, ESLint, Prettier, vitest, build for the browser extension |
 
 ## Planned additions
 
 | Workflow | Introduced in | Purpose |
 |---|---|---|
-| `extension.yml` | Phase 10 | ESLint, Prettier, vitest for the browser extension |
-| `extension.yml` | Phase 10 | ESLint, Prettier, vitest for the browser extension |
 | `release.yml` | Phase 11 | Versioned builds, Firebase Hosting deploy, Cloud Run deploy |
 | `security.yml` | Phase 11 | Dependency vulnerability scanning + SAST |
 

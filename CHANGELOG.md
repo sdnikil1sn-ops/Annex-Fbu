@@ -198,6 +198,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 17 mobile unit/widget tests (controller flows, sign-in gate, full
     submit→report widget flow).
 
+- **Browser extension — full stack (Phase 10).**
+  - ``apps/extension``: React + TypeScript Manifest V3 extension (Chrome /
+    Edge / Firefox) — typed manifest (``src/manifest.ts``, single source of
+    truth emitted as ``dist/manifest.json``) with least-privilege
+    permissions and ANNEX-only host permissions.
+  - **Background service worker**: context menu ("Verify with ANNEX"), a
+    strict typed message router (``handleRequest``) that owns all backend
+    traffic — analysis submission/polling, locale/bundle fetches, and auth
+    — while content/popup stay network-free; unknown message types fail
+    closed.
+  - **Content script**: node-based claim-highlighting engine (case-
+    insensitive, multi-occurrence) that wraps matches in
+    ``<mark class="annex-highlight">`` — never ``innerHTML``, so server
+    content is treated as untrusted data (XSS guard); selection bridge for
+    the popup and a hard cap on highlighted claims.
+  - **Popup app**: pre-fills from the page selection, submits text, polls
+    ``GET /analysis/{id}`` until terminal, and renders the credibility
+    score + per-claim list with an error/retry affordance.
+  - **Options page**: default language, backend API URL, and account
+    management persisted in ``chrome.storage.sync``.
+  - **Firebase Auth SDK** (ADR-0005): Google popup sign-in behind an
+    ``AuthGateway`` port with an explicit mock; ID token flows to the API
+    client as the bearer token.
+  - **Runtime i18n** (ADR-0007): versioned bundles from the v1 API with a
+    typed ``StringKeys`` registry and fallback-chain resolver; the API
+    client (``HttpApiClient``) shares the error-envelope contract with the
+    Flutter app.
+  - **Build**: Vite multi-entry — popup/options React apps plus per-entry
+    IIFE bundles for ``background.js``/``content.js`` (MV3 requirement);
+    programmatic PNG icon generation (``scripts/generate-icons.mjs``).
+  - **Tests**: 33 Vitest tests across shared helpers, the highlighting
+    engine (incl. malicious-payload + sanitization guards), the background
+    router (incl. context-menu wiring), and popup/options component flows
+    — with a jsdom environment and a chrome API mock.
+  - ``.github/workflows/extension.yml`` — typecheck, lint, format, test,
+    build, and dist-layout verification in CI.
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture

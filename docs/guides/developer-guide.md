@@ -10,7 +10,7 @@ day-to-day playbook.
 |---|---|
 | `apps/mobile/` | Flutter app (Android/iOS/Win/Linux/macOS) — Phase 8+ |
 | `apps/web/` | Flutter Web entry + PWA — Phase 8+ |
-| `apps/extension/` | React + TS browser extension — Phase 10 |
+| `apps/extension/` | React + TS browser extension (MV3) — Phase 10 |
 | `backend/` | FastAPI service layer + Celery workers — Phase 3+ |
 | `packages/shared_models/` | Canonical contracts (JSON Schema + Dart) |
 | `packages/shared_ui/` | Flutter design system |

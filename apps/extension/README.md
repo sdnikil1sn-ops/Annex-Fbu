@@ -3,38 +3,90 @@
 A **React + TypeScript** browser extension (Manifest V3) that brings media-literacy
 verification directly into the browsing context — Chrome, Edge, and Firefox.
 
-## Planned contents (implemented in Phase 10)
+## Status: Phase 10 complete
+
+The full extension scaffold is implemented: typed Manifest V3, background service
+worker, content-script claim highlighting, popup and options React apps, typed
+message contracts across all contexts, Firebase Auth, and Vitest coverage.
 
 ```text
 extension/
 ├── src/
 │   ├── background/           # Service worker: messaging, context menus, API calls
-│   ├── content/              # Content scripts: claim highlighting, page inspection
+│   ├── content/              # Content script: claim highlighting, selection bridge
 │   ├── popup/                # Popup UI: quick verification, score summaries
-│   ├── options/              # Options page: language, privacy, account
-│   ├── shared/               # Types and utilities shared across contexts
-│   └── manifest.ts           # Manifest V3 (typed, generated)
-├── public/                   # Static icons and assets
-├── tests/                    # Vitest unit + integration tests
+│   ├── options/              # Options page: language, API URL, account
+│   ├── shared/               # Contracts, models, i18n, API client, auth
+│   └── manifest.ts           # Manifest V3 (typed, single source of truth)
+├── public/icons/             # Generated PNG icons (scripts/generate-icons.mjs)
+├── scripts/                  # Icon generation + per-entry IIFE build
+├── tests/                    # Vitest unit + component tests (jsdom + chrome mock)
+├── popup.html / options.html # HTML entries (emit to dist/ root)
 └── package.json
 ```
 
-## Planned capabilities
+## Capabilities
 
-- **Context-menu analysis** — verify selected text or image URLs instantly.
-- **Inline claim highlighting** — annotate pages with credibility signals.
-- **Source scoring** — domain/publisher trust scores on hover.
-- **Screenshot + OCR pipeline** — send page captures to the backend for analysis.
-- **Language-aware** — same runtime-i18n architecture as the apps.
+- **Context-menu analysis** — right-click any selection → "Verify with ANNEX";
+  the text is handed to the content script for highlighting while the popup
+  drives the verification flow.
+- **Inline claim highlighting** — the content script wraps matched claim text in
+  `<mark class="annex-highlight">` with a per-claim verifiability score.
+  Matching is node-based (never `innerHTML`): server content is treated as
+  untrusted data, so no markup can execute on the page.
+- **Popup verification** — pre-filled from the page selection, submits text,
+  polls `GET /analysis/{id}` until terminal, and renders the credibility score
+  - per-claim list.
+- **Options page** — default language, backend API URL, and account management
+  (Google sign-in / sign-out), persisted in `chrome.storage.sync`.
+- **Firebase Auth** (ADR-0005) — Google popup sign-in behind an `AuthGateway`
+  port with an explicit mock; the ID token flows to the API client as a bearer
+  token.
+- **Language-aware** — same runtime-i18n architecture as the apps: versioned
+  bundles from `GET /i18n/bundles/{locale}` with typed `StringKeys`.
+
+## Architecture
+
+- **Typed message contracts** (`src/shared/contracts.ts`) — every cross-context
+  message flows through a `RequestMessage`/`ResponseMessage` envelope; the
+  background's `handleRequest` is a strict router, unknown types fail closed.
+- **Network isolation** — only the background service worker talks to the
+  backend (`HttpApiClient`); content scripts never touch the network.
+- **Context menus** register on install; the context-menu click bridges the
+  selection to the content script, and the popup is the verification driver.
+
+## Development
+
+```bash
+npm install
+npm test          # vitest (jsdom, chrome API mocked)
+npm run lint      # eslint (flat config)
+npm run format    # prettier --write
+npm run typecheck # tsc --noEmit
+npm run build     # typecheck + icons + popup/options + background/content IIFE
+```
+
+The build emits a loadable unpacked extension in `dist/`:
+
+```text
+dist/
+├── manifest.json     # generated from src/manifest.ts
+├── popup.html        # action.default_popup
+├── options.html      # options_page
+├── background.js     # background.service_worker (IIFE)
+├── content.js        # content_scripts[0].js (IIFE)
+├── assets/           # hashed popup/options bundles + CSS
+└── icons/            # 16/48/128 PNG icons
+```
+
+Load it in Chrome via `chrome://extensions` → Developer mode → "Load unpacked"
+→ select `apps/extension/dist`.
 
 ## Security notes
 
-- Content scripts communicate with the background service worker via strict
-  message contracts — no `eval`, no `innerHTML` with untrusted data (XSS guard).
-- All API calls authenticate through the user's ANNEX session; secrets never ship
-  inside the extension bundle.
-
-## Status
-
-- **Phase 1:** directory documented and reserved.
-- **Phase 10:** extension scaffold, manifest, popup/content/background modules.
+- Content scripts communicate via strict message contracts — no `eval`, and
+  highlighting never sets `innerHTML` with untrusted data (XSS guard).
+- All API calls authenticate through the user's ANNEX session; secrets never
+  ship inside the extension bundle.
+- Least-privilege permissions: `contextMenus`, `activeTab`, `scripting`,
+  `storage` only; host permissions are limited to the ANNEX API.

@@ -22,6 +22,7 @@ repository as the code.
 | `guides/deployment.md` | Planned | 11 |
 | `i18n/architecture.md` | ✅ Created | 8 |
 | `apps/` (mobile) | ✅ Flutter app scaffold + core features | 9 |
+| `apps/` (extension) | ✅ React + TS MV3 browser extension | 10 |
 
 ## Standards
 

@@ -1,0 +1,133 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f7f8fa;
+  --fg: #1b2430;
+  --muted: #64748b;
+  --accent: #2f6fed;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --success: #15803d;
+  --danger: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --fg: #e2e8f0;
+    --muted: #94a3b8;
+    --surface: #1e293b;
+    --border: #334155;
+    --success: #4ade80;
+    --danger: #f87171;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.options {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 28px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.options__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.options__section h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0;
+}
+
+select,
+input[type='url'] {
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.options__label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.options__account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+button:hover {
+  background: var(--border);
+}
+
+.options__save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  align-self: flex-start;
+}
+
+.options__save:hover {
+  background: #2456c4;
+}
+
+.options__error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0;
+}
+
+.options__saved {
+  color: var(--success);
+  font-size: 13px;
+  margin: 0;
+}

@@ -1,0 +1,64 @@
+name: extension
+
+on:
+  push:
+    paths:
+      - 'apps/extension/**'
+      - '.github/workflows/extension.yml'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'apps/extension/**'
+      - '.github/workflows/extension.yml'
+
+concurrency:
+  group: extension-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/extension/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/extension
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: apps/extension
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: apps/extension
+        run: npm run lint
+
+      - name: Format check
+        working-directory: apps/extension
+        run: npm run format:check
+
+      - name: Test
+        working-directory: apps/extension
+        run: npm test
+
+      - name: Build
+        working-directory: apps/extension
+        run: npm run build
+
+      - name: Verify dist layout
+        working-directory: apps/extension
+        run: |
+          test -f dist/manifest.json
+          test -f dist/popup.html
+          test -f dist/options.html
+          test -f dist/background.js
+          test -f dist/content.js
+          test -f dist/icons/icon16.png
+          node -e "const m = require('./dist/manifest.json'); if (m.manifest_version !== 3) process.exit(1)"
