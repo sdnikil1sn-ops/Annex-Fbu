@@ -11,6 +11,7 @@ from uuid import UUID
 
 from app.application.ports.auth import VerifiedIdentity
 from app.domain.analysis import Analysis
+from app.domain.i18n import I18nLocale, TranslationEntry
 from app.domain.user import User
 
 # Cursor for cursor-based pagination: the (created_at, id) of the last
@@ -28,6 +29,19 @@ class UserRepository(Protocol):
     def get_by_id(self, user_id: UUID) -> User | None:
         """Fetch a user with their current role, or None when absent."""
         ...
+
+
+class I18nRepository(Protocol):
+    """Persistence contract for runtime i18n (ADR-0007).
+
+    Locales are the enabled set only; disabled locales are invisible to
+    clients (their bundles answer 404). Translations are fetched per
+    locale and merged into bundles by the service.
+    """
+
+    def list_locales(self) -> list[I18nLocale]: ...
+
+    def translations_for(self, locale_code: str) -> list[TranslationEntry]: ...
 
 
 class AnalysisRepository(Protocol):

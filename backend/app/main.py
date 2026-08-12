@@ -19,6 +19,7 @@ from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerifier
 from app.application.ports.media import ForensicsAdapter, OcrAdapter
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.i18n_service import I18nService
 from app.application.services.user_service import UserService
 from app.core.checks import DatabaseHealthCheck, DependencyCheck, RedisHealthCheck
 from app.core.config import Settings, get_settings
@@ -31,6 +32,7 @@ from app.infrastructure.rate_limit.factory import build_rate_limiter
 from app.infrastructure.rate_limit.limiter import RateLimiter
 from app.infrastructure.rate_limit.middleware import RateLimitMiddleware
 from app.infrastructure.repositories.analysis_repository import PostgresAnalysisRepository
+from app.infrastructure.repositories.i18n_repository import PostgresI18nRepository
 from app.infrastructure.repositories.user_repository import PostgresUserRepository
 from app.infrastructure.tasks.dispatcher import build_analysis_task_dispatcher
 
@@ -44,6 +46,7 @@ def create_app(
     ocr_adapter: OcrAdapter | None = None,
     forensics_adapter: ForensicsAdapter | None = None,
     analysis_service: AnalysisService | None = None,
+    i18n_service: I18nService | None = None,
     rate_limiter: RateLimiter | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application instance.
@@ -65,6 +68,9 @@ def create_app(
             in-memory repository); defaults to the PostgreSQL-backed service
             when a database is configured, enqueuing work on the Celery
             worker when a broker is configured (ADR-0008).
+        i18n_service: Optional i18n service override (tests use the
+            in-memory repository); defaults to the PostgreSQL-backed service
+            when a database is configured (ADR-0007).
         rate_limiter: Optional rate limiter override (tests inject a
             deterministic limiter); defaults to a Redis-backed limiter when
             Redis is configured, else a no-op fallback.
@@ -134,6 +140,16 @@ def create_app(
             task_dispatcher=task_dispatcher,
         )
     app.state.analysis_service = analysis_service
+
+    # Runtime i18n (Phase 8, ADR-0007): serve enabled locales and
+    # versioned translation bundles from the configured database unless
+    # overridden (tests inject the in-memory mock).
+    if i18n_service is None and settings.database_url:
+        i18n_service = I18nService(
+            PostgresI18nRepository(settings.database_url),
+            default_locale=settings.i18n_default_locale,
+        )
+    app.state.i18n_service = i18n_service
 
     # add_middleware prepends: the LAST registration is the OUTERMOST layer.
     # Order: RateLimit innermost (so 429s pass through CORS and carry CORS

@@ -14,6 +14,7 @@ from app.api.errors import AppError
 from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerificationError, TokenVerifier
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.i18n_service import I18nService
 from app.application.services.user_service import UserService
 from app.core.config import Settings
 from app.domain.user import User
@@ -44,6 +45,18 @@ def get_analysis_service_dep(request: Request) -> AnalysisService:
         raise AppError(
             "analysis.not_configured",
             "Analysis processing is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_i18n_service_dep(request: Request) -> I18nService:
+    """Return the bound i18n service, or 503 when it is not configured."""
+    service: I18nService | None = getattr(request.app.state, "i18n_service", None)
+    if service is None:
+        raise AppError(
+            "i18n.not_configured",
+            "Translation delivery is not configured on this server.",
             status_code=503,
         )
     return service

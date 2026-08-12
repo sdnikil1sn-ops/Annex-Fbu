@@ -68,3 +68,11 @@ backend/
   rate limiting with a 429 envelope; Redis readiness probe; local dev
   stack (``docker compose -f docker/compose.dev.yml up``) and dev scripts
   (155 tests).
+- **Phase 8 (done):** Runtime i18n (ADR-0007) — enabled locales and
+  versioned translation bundles served from ``i18n_locales`` /
+  ``i18n_translations`` via ``GET /api/v1/i18n/locales`` and
+  ``GET /api/v1/i18n/bundles/{locale}`` with server-side fallback-chain
+  resolution (requested → parent → en), bundle versioning with
+  ``304 Not Modified``/ETag support, and cache headers; seed migration
+  covering en/pt/es/fr/de/ar/ja; typed key registry and locale utilities
+  in ``packages/shared_utils`` (Phase 8; 179 backend tests + 23 Dart).

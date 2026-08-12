@@ -207,6 +207,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/i18n/locales:
+    get:
+      tags:
+      - i18n
+      summary: List Locales
+      description: Return every enabled locale with its fallback parent.
+      operationId: list_locales_api_v1_i18n_locales_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response List Locales Api V1 I18N Locales Get
+  /api/v1/i18n/bundles/{locale}:
+    get:
+      tags:
+      - i18n
+      summary: Get Bundle
+      description: 'Return a versioned translation bundle resolved over the fallback
+        chain.
+
+
+        Conditional requests: pass the previously received ``version`` as a
+
+        query parameter (or ``If-None-Match`` with the bundle ETag) to receive
+
+        ``304 Not Modified`` while the bundle is unchanged.'
+      operationId: get_bundle_api_v1_i18n_bundles__locale__get
+      parameters:
+      - name: locale
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Locale
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Version
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
     AnalysisInputType:

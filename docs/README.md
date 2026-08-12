@@ -20,7 +20,7 @@ repository as the code.
 | `guides/testing.md` | ✅ Created | 2 |
 | `guides/security.md` | Planned | 5 |
 | `guides/deployment.md` | Planned | 11 |
-| `i18n/architecture.md` | Planned | 8 |
+| `i18n/architecture.md` | ✅ Created | 8 |
 
 ## Standards
 

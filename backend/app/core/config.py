@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     rate_limit_default: str = "120/minute"
     rate_limit_analysis: str = "20/minute"
 
+    # Runtime i18n (Phase 8, ADR-0007): the fallback-chain root and the
+    # Cache-Control TTL (seconds) for locale bundles served to clients.
+    i18n_default_locale: str = "en"
+    i18n_bundle_cache_ttl: int = 300
+
     # CORS: origins allowed to call the API from browsers.
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:8080"]

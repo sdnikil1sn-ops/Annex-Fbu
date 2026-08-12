@@ -144,6 +144,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     parsing/windows/429s, dispatcher wiring, and Redis integration
     (155 tests total, ~94% coverage).
 
+- **Runtime i18n (Phase 8, ADR-0007).**
+  - Versioned translation bundles served from the i18n schema
+    (``i18n_locales`` / ``i18n_translations``): ``GET /api/v1/i18n/locales``
+    (enabled locales + fallback parents) and
+    ``GET /api/v1/i18n/bundles/{locale}`` (resolved bundles).
+  - Server-side fallback-chain resolution (requested → parent → … → en)
+    in the domain layer (``app.domain.i18n``) — the requested locale wins
+    on its own keys, missing keys are filled from the nearest parent.
+  - Bundle versioning: responses carry a strong ``ETag`` and
+    ``Cache-Control``; passing ``?version=N`` or ``If-None-Match`` yields
+    ``304 Not Modified`` for unchanged bundles.
+  - ``I18nRepository`` port with PostgreSQL implementation + explicit
+    in-memory mock; ``I18nService`` wired into the composition root like
+    the other services (503 ``i18n.not_configured`` without a database).
+  - Seed migration 20260812000003: locales en/pt/es/fr/de/ar/ja with
+    fallback chains and a base translation set (common, analysis, auth,
+    errors namespaces; ICU plural category on canonical forms).
+  - ``docs/i18n/architecture.md`` — the runtime-i18n contract (bundle
+    shapes, fallback algorithm, versioning, plural/RTL handling, adding a
+    language, typed-keys lint rule).
+  - ``packages/shared_utils`` (Dart): typed ``StringKeys`` registry,
+    fallback-chain resolver, ICU plural-category selector, and
+    language-tag validation with 23 unit tests; ``.github/workflows/dart.yml``
+    runs format/analyze/test for the package in CI.
+  - 24 new backend tests (service resolution, bundle API incl. 304/ETag,
+    Postgres integration) — 180 backend + 23 Dart tests total.
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture

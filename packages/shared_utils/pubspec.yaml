@@ -1,0 +1,13 @@
+name: shared_utils
+description: >-
+  Pure-Dart utilities shared by all ANNEX apps — i18n key registry, locale
+  resolution, plural rules, and validation (ADR-0007).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.0

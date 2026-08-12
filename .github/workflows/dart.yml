@@ -1,0 +1,56 @@
+# =====================================================================
+# ANNEX — Dart CI (Phase 8)
+# Runs when a Dart package changes: format, static analysis, and tests
+# for packages/shared_utils (the i18n key registry and locale utilities,
+# ADR-0007). Additional Dart packages join this job as they land.
+# =====================================================================
+
+name: Dart
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/shared_utils/**", ".github/workflows/dart.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["packages/shared_utils/**", ".github/workflows/dart.yml"]
+
+# Least privilege: this workflow only reads repository contents.
+permissions:
+  contents: read
+
+# Cancel superseded runs of the same ref to save CI minutes.
+concurrency:
+  group: dart-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Format, analyze, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install dependencies
+        working-directory: packages/shared_utils
+        run: dart pub get
+
+      - name: Format check
+        working-directory: packages/shared_utils
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        working-directory: packages/shared_utils
+        run: dart analyze
+
+      - name: Test
+        working-directory: packages/shared_utils
+        run: dart test

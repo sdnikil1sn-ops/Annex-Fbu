@@ -5,12 +5,14 @@ from uuid import uuid4
 import pytest
 from app.application.ports.auth import VerifiedIdentity
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.i18n_service import I18nService
 from app.application.services.user_service import UserService
 from app.core.config import Settings
 from app.infrastructure.auth.mock_token_verifier import MockTokenVerifier
 from app.infrastructure.repositories.mock_analysis_repository import (
     MockAnalysisRepository,
 )
+from app.infrastructure.repositories.mock_i18n_repository import MockI18nRepository
 from app.infrastructure.repositories.mock_user_repository import MockUserRepository
 from app.main import create_app
 from fastapi.testclient import TestClient
@@ -55,6 +57,19 @@ def user_service() -> UserService:
 def analysis_service() -> AnalysisService:
     """An analysis service backed by an in-memory repository."""
     return AnalysisService(MockAnalysisRepository())
+
+
+@pytest.fixture()
+def i18n_service() -> I18nService:
+    """An i18n service backed by the seeded in-memory repository."""
+    return I18nService(MockI18nRepository.seeded(), default_locale="en")
+
+
+@pytest.fixture()
+def i18n_client(settings: Settings, i18n_service: I18nService) -> TestClient:
+    """A client with the mock-backed i18n service wired in."""
+    app = create_app(settings, i18n_service=i18n_service)
+    return TestClient(app, raise_server_exceptions=False)
 
 
 @pytest.fixture()
