@@ -13,6 +13,7 @@ from app.application.ports.auth import VerifiedIdentity
 from app.domain.analysis import Analysis
 from app.domain.claim import Claim
 from app.domain.i18n import I18nLocale, TranslationEntry
+from app.domain.lesson import Lesson, LessonProgress
 from app.domain.media import MediaItem
 from app.domain.source import Source
 from app.domain.user import User
@@ -101,3 +102,28 @@ class MediaRepository(Protocol):
     def save(self, item: MediaItem) -> MediaItem: ...
 
     def get(self, media_id: UUID) -> MediaItem | None: ...
+
+
+class LessonRepository(Protocol):
+    """Persistence contract for the education curriculum (Phase 15).
+
+    Content is resolved for the best available locale in the caller's
+    fallback chain (ADR-0007): the repository picks the content row whose
+    locale appears earliest in ``chain`` (requested → parent → default).
+    Progress rows are joined per user, so list/get return the aggregate
+    with completion state attached.
+    """
+
+    def list_lessons(
+        self, *, chain: list[str], user_id: UUID | None = None
+    ) -> list[Lesson]: ...
+
+    def get_lesson(
+        self, lesson_id: UUID, *, chain: list[str], user_id: UUID | None = None
+    ) -> Lesson | None: ...
+
+    def get_by_slug(
+        self, slug: str, *, chain: list[str], user_id: UUID | None = None
+    ) -> Lesson | None: ...
+
+    def mark_complete(self, user_id: UUID, lesson_id: UUID) -> LessonProgress: ...

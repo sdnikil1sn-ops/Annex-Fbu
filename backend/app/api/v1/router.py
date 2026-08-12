@@ -1,13 +1,13 @@
 """Versioned API router aggregating all v1 sub-routers.
 
-New feature routers (analysis, claims, sources, users, media, i18n) are
-included here as their phases land. Note: the unversioned health router is
-mounted directly by the application factory (app.main), not here.
+New feature routers (analysis, claims, sources, users, media, lessons,
+i18n) are included here as their phases land. Note: the unversioned health
+router is mounted directly by the application factory (app.main), not here.
 """
 
 from fastapi import APIRouter
 
-from app.api.v1 import analysis, claims, i18n, media, meta, sources, users
+from app.api.v1 import analysis, claims, i18n, lessons, media, meta, sources, users
 
 api_router = APIRouter()
 api_router.include_router(meta.router)
@@ -16,4 +16,5 @@ api_router.include_router(analysis.router)
 api_router.include_router(claims.router)
 api_router.include_router(sources.router)
 api_router.include_router(media.router)
+api_router.include_router(lessons.router)
 api_router.include_router(i18n.router)

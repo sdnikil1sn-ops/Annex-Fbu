@@ -12,7 +12,7 @@
 | Authentication | Firebase ID token in `Authorization: Bearer <token>`; verified server-side (ADR-0005) |
 | Anonymous access | Public endpoints are explicitly listed; everything else requires a verified token |
 | Response envelope | `{ "data": ..., "meta": {...} }` for success; `{ "error": { "code", "message", "request_id" } }` for failure |
-| Error codes | Machine-readable codes (`auth.expired_token`, `validation.invalid_input`, `validation.invalid_url`, `validation.invalid_image`, `analysis.not_found`, `analysis.fetch_failed`, `analysis.media_failed`, `claim.not_found`, `source.not_found`, `media.not_found`, `media.analysis_not_found`, `rate.exceeded`, …) |
+| Error codes | Machine-readable codes (`auth.expired_token`, `validation.invalid_input`, `validation.invalid_url`, `validation.invalid_image`, `analysis.not_found`, `analysis.fetch_failed`, `analysis.media_failed`, `claim.not_found`, `source.not_found`, `media.not_found`, `media.analysis_not_found`, `lesson.not_found`, `rate.exceeded`, …) |
 | Pagination | Cursor-based: `?cursor=...&limit=50`; `meta.next_cursor` returned |
 | Idempotency | State-changing analysis endpoints accept `Idempotency-Key` headers |
 | Tracing | Every response includes `X-Request-ID`; log lines carry it |
@@ -88,11 +88,23 @@
 
 ## Education
 
+> Implemented in Phase 15. The media-literacy curriculum: lesson metadata,
+> localized content (resolved through the caller's locale fallback chain,
+> ADR-0007), and idempotent per-user completion. All routes require a
+> token — progress is per-user and content renders in the user's locale.
+
 | Method | Path | Auth | Rate limit | Purpose |
 |---|---|---|---|---|
-| GET | `/api/v1/lessons` | token | 60/min | Lesson list (localized) |
-| GET | `/api/v1/lessons/{id}` | token | 120/min | Lesson content (localized) |
-| POST | `/api/v1/lessons/{id}/complete` | token | 30/min | Mark lesson complete (progress) |
+| GET | `/api/v1/lessons` | token | 60/min | Lesson list (localized, with progress) |
+| GET | `/api/v1/lessons/{id or slug}` | token | 120/min | Lesson content + sections (localized) |
+| POST | `/api/v1/lessons/{id or slug}/complete` | token | 30/min | Mark lesson complete (idempotent) |
+
+> `{id or slug}` accepts either the lesson UUID or its stable slug (e.g.
+> `spotting-misinformation`) so clients can deep-link with human-readable
+> URLs. Completing a lesson twice keeps the original timestamp (the first
+> completion wins). An unknown lesson reference answers `lesson.not_found`.
+
+## i18n
 
 ## i18n
 

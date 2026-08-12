@@ -380,6 +380,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     updated analyzer/service/task tests for the enriched contract
     (225 backend + 19 Dart tests total).
 
+- **Education lessons — the media-literacy curriculum (Phase 15).**
+  - Schema (``20260812000005_lessons.sql``): ``lessons`` metadata,
+    ``lesson_contents`` keyed by (lesson, locale) with a JSONB
+    ``sections`` array, and idempotent per-user ``lesson_progress``;
+    content and progress read as one aggregate with the caller's
+    completion state attached.
+  - Localized delivery (ADR-0007): the education service expands the
+    user's locale into its fallback chain and the repository resolves
+    the best available content via a lateral join ordered by
+    ``array_position`` over the chain — a ``pt`` user gets pt content
+    where it exists and falls back to en otherwise.
+  - Seed migration (``20260812000006_lesson_seed.sql``): four baseline
+    lessons (spotting misinformation, credibility scores, image
+    verification, claim analysis) with full English content and a
+    Portuguese variant for the first lesson to exercise the chain.
+  - Endpoints (token-authenticated per the v1 contract):
+    ``GET /lessons`` (localized list with progress),
+    ``GET /lessons/{id}`` (content + sections), and
+    ``POST /lessons/{id}/complete`` (idempotent completion — the first
+    timestamp wins). Error codes: ``lesson.not_found``.
+  - Tests: service unit tests (chain resolution, idempotency),
+    API tests (auth, localization, completion), and repository
+    integration tests (242 backend tests total).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -400,6 +424,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   endpoint contracts and error codes (multipart upload replaced by the
   base64 JSON body, no separate analyze endpoint); `backend/README.md`
   documents the Phase 14 status; OpenAPI contract regenerated.
+- `docs/api/v1-endpoints.md` updated with the Phase 15 lessons contract
+  (localized list/detail/complete, ``lesson.not_found``); `backend/README.md`
+  documents the Phase 15 status; OpenAPI contract regenerated.
 
 ### Deprecated
 

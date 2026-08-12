@@ -20,6 +20,7 @@ from app.application.ports.auth import TokenVerifier
 from app.application.ports.media import ForensicsAdapter, OcrAdapter
 from app.application.services.analysis_service import AnalysisService
 from app.application.services.claims_service import ClaimsService
+from app.application.services.education_service import EducationService
 from app.application.services.i18n_service import I18nService
 from app.application.services.media_pipeline import MediaPipeline
 from app.application.services.media_service import MediaService
@@ -42,6 +43,7 @@ from app.infrastructure.rate_limit.middleware import RateLimitMiddleware
 from app.infrastructure.repositories.analysis_repository import PostgresAnalysisRepository
 from app.infrastructure.repositories.claim_repository import PostgresClaimRepository
 from app.infrastructure.repositories.i18n_repository import PostgresI18nRepository
+from app.infrastructure.repositories.lesson_repository import PostgresLessonRepository
 from app.infrastructure.repositories.media_repository import PostgresMediaRepository
 from app.infrastructure.repositories.source_repository import PostgresSourceRepository
 from app.infrastructure.repositories.user_repository import PostgresUserRepository
@@ -61,6 +63,7 @@ def create_app(
     claims_service: ClaimsService | None = None,
     source_service: SourceService | None = None,
     media_service: MediaService | None = None,
+    education_service: EducationService | None = None,
     i18n_service: I18nService | None = None,
     rate_limiter: RateLimiter | None = None,
 ) -> FastAPI:
@@ -95,6 +98,9 @@ def create_app(
         media_service: Optional media service override; defaults to the
             PostgreSQL-backed service bound to the media adapters when a
             database is configured (Phase 14).
+        education_service: Optional education service override (tests use
+            the in-memory repository); defaults to the PostgreSQL-backed
+            service when a database is configured (Phase 15).
         i18n_service: Optional i18n service override (tests use the
             in-memory repository); defaults to the PostgreSQL-backed service
             when a database is configured (ADR-0007).
@@ -195,6 +201,17 @@ def create_app(
             forensics_adapter=app.state.forensics_adapter,
         )
     app.state.media_service = media_service
+
+    # Education curriculum (Phase 15): the media-literacy lessons service
+    # resolves localized content through the i18n locale registry (ADR-0007)
+    # so lesson reads honor the same fallback chain as translation bundles.
+    if education_service is None and settings.database_url:
+        education_service = EducationService(
+            PostgresLessonRepository(settings.database_url),
+            PostgresI18nRepository(settings.database_url),
+            default_locale=settings.i18n_default_locale,
+        )
+    app.state.education_service = education_service
 
     # Runtime i18n (Phase 8, ADR-0007): serve enabled locales and
     # versioned translation bundles from the configured database unless

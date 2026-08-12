@@ -395,6 +395,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/lessons:
+    get:
+      tags:
+      - lessons
+      summary: List Lessons
+      description: Return the published curriculum, localized for the caller.
+      operationId: list_lessons_api_v1_lessons_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response List Lessons Api V1 Lessons Get
+  /api/v1/lessons/{lesson_ref}:
+    get:
+      tags:
+      - lessons
+      summary: Get Lesson
+      description: 'Fetch one lesson with its localized content and progress.
+
+
+        ``lesson_ref`` accepts either the lesson UUID or its stable slug
+
+        (e.g. ``spotting-misinformation``), so clients can deep-link with
+
+        human-readable URLs.'
+      operationId: get_lesson_api_v1_lessons__lesson_ref__get
+      parameters:
+      - name: lesson_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '[0-9a-f-]{36}|[a-z0-9-]{1,100}'
+          title: Lesson Ref
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Lesson Api V1 Lessons  Lesson Ref  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/lessons/{lesson_ref}/complete:
+    post:
+      tags:
+      - lessons
+      summary: Complete Lesson
+      description: Mark a lesson complete (idempotent; first completion wins).
+      operationId: complete_lesson_api_v1_lessons__lesson_ref__complete_post
+      parameters:
+      - name: lesson_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '[0-9a-f-]{36}|[a-z0-9-]{1,100}'
+          title: Lesson Ref
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Complete Lesson Api V1 Lessons  Lesson Ref  Complete
+                  Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/i18n/locales:
     get:
       tags:

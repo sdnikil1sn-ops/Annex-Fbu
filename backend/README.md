@@ -95,3 +95,12 @@ backend/
   (search + profile, public-read), ``POST /media`` (base64 image → OCR +
   forensics) and ``GET /media/{id}``. Sources seed migration
   (``20260812000004_source_seed.sql``). 225 backend tests.
+- **Phase 15 (done):** Education lessons — the media-literacy curriculum.
+  ``lessons`` / ``lesson_contents`` (per-locale, JSONB sections) /
+  ``lesson_progress`` (idempotent per-user completion) with RLS.
+  ``EducationService`` expands the user's locale into its fallback chain
+  (ADR-0007) and the repository resolves the best content via a lateral
+  join ordered over the chain. Endpoints: ``GET /lessons`` (localized
+  list + progress), ``GET /lessons/{id}`` (content + sections), and
+  ``POST /lessons/{id}/complete`` (first completion wins). Seed migration
+  ``20260812000006_lesson_seed.sql``. 242 backend tests.

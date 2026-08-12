@@ -15,6 +15,7 @@ from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerificationError, TokenVerifier
 from app.application.services.analysis_service import AnalysisService
 from app.application.services.claims_service import ClaimsService
+from app.application.services.education_service import EducationService
 from app.application.services.i18n_service import I18nService
 from app.application.services.media_service import MediaService
 from app.application.services.source_service import SourceService
@@ -96,6 +97,18 @@ def get_media_service_dep(request: Request) -> MediaService:
         raise AppError(
             "media.not_configured",
             "Media processing is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_education_service_dep(request: Request) -> EducationService:
+    """Return the bound education service, or 503 when it is not configured."""
+    service: EducationService | None = getattr(request.app.state, "education_service", None)
+    if service is None:
+        raise AppError(
+            "education.not_configured",
+            "The curriculum is not configured on this server.",
             status_code=503,
         )
     return service
