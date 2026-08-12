@@ -20,5 +20,7 @@ the shared packages under [`../packages/`](../packages/README.md).
 
 ## Status
 
-- `mobile/`, `web/`, and `extension/` are scaffolded as documented directories.
-  Implementation begins in **Phase 8** (Flutter apps) and **Phase 10** (extension).
+- `mobile/` — implemented in Phase 9 (analysis flow, auth gateway, runtime
+  i18n, settings); Flutter scaffold + platform folders landed in Phase 9.
+- `web/` and `extension/` are scaffolded as documented directories
+  (implementation: web Phase 9+, extension Phase 10).

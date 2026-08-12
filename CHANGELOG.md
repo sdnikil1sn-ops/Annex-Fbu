@@ -171,6 +171,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 24 new backend tests (service resolution, bundle API incl. 304/ETag,
     Postgres integration) — 180 backend + 23 Dart tests total.
 
+- **Flutter mobile app — core features (Phase 9).**
+  - ``apps/mobile`` (Flutter scaffold, Android/iOS/Windows/Linux/macOS):
+    app shell with DI composition root (``AppScope`` + provider), feature-
+    first layout (auth, analysis, settings), and runtime i18n wiring.
+  - **Analysis flow end-to-end**: ``AnalysisController`` submits text,
+    polls ``GET /analysis/{id}`` until terminal, and renders the report
+    (credibility ``ScoreMeter``, ``ClaimCard`` per claim) through
+    ``shared_ui`` components.
+  - **Firebase Auth SDK gateway** (ADR-0005): anonymous, email/password,
+    and Google sign-in behind an ``AuthGateway`` port with an explicit
+    mock for tests; signed-out users see the sign-in screen.
+  - **Runtime i18n client** (ADR-0007): ``I18nController`` loads locales
+    and versioned bundles from the backend, resolves typed ``StringKeys``
+    with server-resolved fallbacks; language + theme settings screens.
+  - **API client**: ``AnalysisApi`` port with ``HttpAnalysisApi`` (bearer
+    token, error envelope) and ``MockAnalysisApi`` for local dev/tests.
+  - ``packages/shared_models``: analysis, i18n, and user Dart models with
+    strict JSON round-trip tests matching the OpenAPI contract (14 tests).
+  - ``packages/shared_ui``: design tokens (colors/spacing/typography),
+    light/dark themes, and core components — ``AppButton``, ``ScoreMeter``,
+    ``ClaimCard``, ``StatusPill`` — with widget tests (9 tests).
+  - ``StringKeys`` registry extended with the app's UI keys (analysis,
+    auth, settings namespaces); ``.github/workflows/flutter.yml`` runs
+    format/analyze/test for the app + Flutter packages in CI.
+  - 17 mobile unit/widget tests (controller flows, sign-in gate, full
+    submit→report widget flow).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture

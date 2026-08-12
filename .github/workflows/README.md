@@ -9,13 +9,15 @@ integration and delivery pipeline.
 |---|---|---|
 | `ci.yml` | Phase 2 | Repository validation: YAML syntax, markdown links, required files, secret patterns |
 | `backend.yml` | Phase 3 | Ruff, mypy, pytest with coverage for the FastAPI service |
+| `docker.yml` | Phase 7 | Build and scan container images |
+| `dart.yml` | Phase 8 | Format, analyze, test for pure-Dart packages (`shared_utils`) |
+| `flutter.yml` | Phase 9 | Format, analyze, test for Flutter app + packages |
 
 ## Planned additions
 
 | Workflow | Introduced in | Purpose |
 |---|---|---|
-| `docker.yml` | Phase 7 | Build and scan container images |
-| `flutter.yml` | Phase 8 | `dart format --set-exit-if-changed`, `dart analyze`, `flutter test` |
+| `extension.yml` | Phase 10 | ESLint, Prettier, vitest for the browser extension |
 | `extension.yml` | Phase 10 | ESLint, Prettier, vitest for the browser extension |
 | `release.yml` | Phase 11 | Versioned builds, Firebase Hosting deploy, Cloud Run deploy |
 | `security.yml` | Phase 11 | Dependency vulnerability scanning + SAST |

@@ -25,14 +25,30 @@ abstract final class StringKeys {
   // analysis
   static const analysisSubmit = 'analysis.submit';
   static const analysisPending = 'analysis.pending';
+  static const analysisProcessing = 'analysis.processing';
   static const analysisCompleted = 'analysis.completed';
   static const analysisFailed = 'analysis.failed';
   static const analysisSummary = 'analysis.summary';
   static const analysisCredibilityScore = 'analysis.credibility_score';
+  static const analysisVerifiability = 'analysis.verifiability';
+  static const analysisTitle = 'analysis.title';
+  static const analysisInputHint = 'analysis.input_hint';
 
   // auth
   static const authSignIn = 'auth.sign_in';
   static const authSignOut = 'auth.sign_out';
+  static const authContinueGuest = 'auth.continue_guest';
+  static const authContinueGoogle = 'auth.continue_google';
+  static const authGuestLabel = 'auth.guest_label';
+
+  // settings
+  static const settingsTitle = 'settings.title';
+  static const settingsLanguage = 'settings.language';
+  static const settingsTheme = 'settings.theme';
+  static const settingsThemeSystem = 'settings.theme_system';
+  static const settingsThemeLight = 'settings.theme_light';
+  static const settingsThemeDark = 'settings.theme_dark';
+  static const settingsAccount = 'settings.account';
 
   // errors
   static const errorsGeneric = 'errors.generic';
@@ -50,12 +66,26 @@ abstract final class StringKeys {
     commonClaimsCount,
     analysisSubmit,
     analysisPending,
+    analysisProcessing,
     analysisCompleted,
     analysisFailed,
     analysisSummary,
     analysisCredibilityScore,
+    analysisVerifiability,
+    analysisTitle,
+    analysisInputHint,
     authSignIn,
     authSignOut,
+    authContinueGuest,
+    authContinueGoogle,
+    authGuestLabel,
+    settingsTitle,
+    settingsLanguage,
+    settingsTheme,
+    settingsThemeSystem,
+    settingsThemeLight,
+    settingsThemeDark,
+    settingsAccount,
     errorsGeneric,
     errorsNotFound,
     errorsRateLimited,

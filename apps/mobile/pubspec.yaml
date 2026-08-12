@@ -1,0 +1,39 @@
+name: annex_mobile
+description: >-
+  ANNEX mobile app — claim analysis, source credibility, and media
+  literacy (Learn Before You Believe). Flutter, six platforms.
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Shared monorepo packages (ADR-0002 / ADR-0007).
+  shared_utils:
+    path: ../../packages/shared_utils
+  shared_models:
+    path: ../../packages/shared_models
+  shared_ui:
+    path: ../../packages/shared_ui
+
+  # Networking + state.
+  http: ^1.5.0
+  provider: ^6.1.0
+
+  # Authentication (ADR-0005): Firebase Auth SDK — anonymous, email, Google.
+  firebase_core: ^4.0.0
+  firebase_auth: ^6.0.0
+  google_sign_in: ^6.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

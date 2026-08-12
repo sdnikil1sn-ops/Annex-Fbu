@@ -32,3 +32,6 @@ shared_ui/
 
 - **Phase 1:** package documented and reserved.
 - **Phase 8:** token foundation, core components, accessibility layer.
+- **Phase 9 (done):** shipped with the mobile app — tokens (colors, spacing,
+  typography), light/dark themes, and core components (`AppButton`,
+  `ScoreMeter`, `ClaimCard`, `StatusPill`) with widget tests (9).

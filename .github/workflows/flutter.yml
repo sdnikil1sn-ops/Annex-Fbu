@@ -1,0 +1,85 @@
+# =====================================================================
+# ANNEX — Flutter CI (Phase 9)
+# Runs when the Flutter app or a Flutter package changes: format,
+# static analysis, and tests for apps/mobile and packages/shared_ui.
+# Pure-Dart packages (shared_utils, shared_models) run in dart.yml.
+# =====================================================================
+
+name: Flutter
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/shared_ui/**"
+      # shared_utils/shared_models are dependencies of the mobile app and
+      # are also exercised here (pure-Dart jobs live in dart.yml).
+      - "packages/shared_utils/**"
+      - "packages/shared_models/**"
+      - ".github/workflows/flutter.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/shared_ui/**"
+      - "packages/shared_utils/**"
+      - "packages/shared_models/**"
+      - ".github/workflows/flutter.yml"
+
+# Least privilege: this workflow only reads repository contents.
+permissions:
+  contents: read
+
+# Cancel superseded runs of the same ref to save CI minutes.
+concurrency:
+  group: flutter-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Format, analyze, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies (shared_ui)
+        working-directory: packages/shared_ui
+        run: flutter pub get
+
+      - name: Format check (shared_ui)
+        working-directory: packages/shared_ui
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze (shared_ui)
+        working-directory: packages/shared_ui
+        run: flutter analyze
+
+      - name: Test (shared_ui)
+        working-directory: packages/shared_ui
+        run: flutter test
+
+      - name: Install dependencies (mobile)
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Format check (mobile)
+        working-directory: apps/mobile
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze (mobile)
+        working-directory: apps/mobile
+        run: flutter analyze
+
+      - name: Test (mobile)
+        working-directory: apps/mobile
+        run: flutter test

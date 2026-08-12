@@ -41,3 +41,6 @@ shared_models/
 
 - **Phase 1:** package documented and reserved.
 - **Phase 8:** first model versions + codegen pipeline.
+- **Phase 9 (done):** analysis, i18n, and user models matching the backend
+  contract, with strict JSON round-trip tests (14). Codegen pipeline
+  (from OpenAPI/JSON Schema) remains a follow-up.

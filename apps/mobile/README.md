@@ -34,4 +34,30 @@ mobile/
 
 - **Phase 1:** directory documented and reserved.
 - **Phase 8:** Flutter project scaffold, architecture, theming, i18n foundation.
-- **Phase 9:** core feature implementation.
+- **Phase 9 (done):** core feature implementation — app shell with the
+  analysis flow (submit text → poll → render the claim report), Firebase
+  Auth SDK gateway (anonymous/email/Google) with an explicit mock,
+  runtime i18n wired to the backend bundles through `StringKeys`, and
+  settings (language/theme). 17 unit + widget tests.
+
+## Implemented (Phase 9)
+
+```text
+mobile/
+├── lib/
+│   ├── main.dart             # Composition root: Firebase + API + i18n wiring
+│   ├── app/                  # App shell (AnnexApp, AppScope DI, navigation)
+│   ├── core/
+│   │   ├── config.dart       # API base URL via --dart-define
+│   │   └── api/              # AnalysisApi (HTTP) + MockAnalysisApi
+│   ├── features/
+│   │   ├── auth/             # AuthGateway + Firebase impl + mock + controller
+│   │   ├── analysis/         # AnalysisController (submit + poll) + screen
+│   │   └── settings/         # Language/theme settings + screen
+│   └── l10n/                 # I18nController: runtime bundle loading
+├── test/                     # Controller + widget tests (17)
+└── pubspec.yaml
+```
+
+Run it: `flutter run` (debug builds use the mock API; point at the real
+backend with `--dart-define=ANNEX_API_URL=... --dart-define=ANNEX_USE_MOCK=false`).

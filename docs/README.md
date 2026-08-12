@@ -21,6 +21,7 @@ repository as the code.
 | `guides/security.md` | Planned | 5 |
 | `guides/deployment.md` | Planned | 11 |
 | `i18n/architecture.md` | ✅ Created | 8 |
+| `apps/` (mobile) | ✅ Flutter app scaffold + core features | 9 |
 
 ## Standards
 
