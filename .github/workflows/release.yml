@@ -1,0 +1,182 @@
+# =====================================================================
+# ANNEX — Release pipeline (Phase 11)
+# Triggered by a v* tag push (created by scripts/release.sh):
+#   1. Builds the backend/worker image from the tagged tree.
+#   2. Scans it with Trivy (CRITICAL/HIGH fails the release).
+#   3. Publishes the image to GHCR (ghcr.io/<repo>/backend).
+#   4. Deploys the API + worker services to Cloud Run via Workload
+#      Identity Federation — the deploy job is skipped until the Google
+#      Cloud secrets below are configured.
+#
+# Required repository secrets (deploy job only):
+#   GOOGLE_CLOUD_PROJECT, GOOGLE_WORKLOAD_IDENTITY_PROVIDER,
+#   GOOGLE_SERVICE_ACCOUNT  and variable GOOGLE_CLOUD_REGION.
+# =====================================================================
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: Build, scan, publish image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.resolve.outputs.image }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # GHCR requires lowercase repository names.
+          images: ghcr.io/${{ github.repository }}/backend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Resolve primary image ref
+        id: resolve
+        run: |
+          image="$(printf '%s' '${{ steps.meta.outputs.tags }}' | head -n 1)"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            APP_VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan published image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.resolve.outputs.image }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Upload Trivy SARIF report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-sarif
+          path: trivy-results.sarif
+          if-no-files-found: error
+
+  deploy-cloudrun:
+    name: Deploy to Cloud Run
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Skipped until GOOGLE_CLOUD_PROJECT is configured as a repository
+    # secret. The env block lets the `if` and the steps reference it.
+    if: env.GOOGLE_CLOUD_PROJECT != ''
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GOOGLE_CLOUD_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+      GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+      GOOGLE_CLOUD_REGION: ${{ vars.GOOGLE_CLOUD_REGION }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Deploy API service
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: annex-api
+          image: ${{ needs.image.outputs.image }}
+          region: ${{ env.GOOGLE_CLOUD_REGION }}
+          env_vars: |-
+            APP_ENV=production
+            LOG_LEVEL=INFO
+            ALLOWED_ORIGINS=["https://<app-domain>"]
+            FIREBASE_PROJECT_ID=<firebase-project-id>
+            OCR_LANGUAGES=eng
+            RATE_LIMIT_DEFAULT=120/minute
+            RATE_LIMIT_ANALYSIS=20/minute
+            I18N_DEFAULT_LOCALE=en
+            I18N_BUNDLE_CACHE_TTL=300
+          secrets: |-
+            DATABASE_URL=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-database-url/versions/latest
+            REDIS_URL=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-redis-url/versions/latest
+            CELERY_BROKER_URL=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-celery-broker-url/versions/latest
+            CELERY_RESULT_BACKEND=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-celery-result-backend/versions/latest
+            OPENAI_API_KEY=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-openai-api-key/versions/latest
+            GEMINI_API_KEY=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-gemini-api-key/versions/latest
+          flags: |-
+            --min-instances=0
+            --max-instances=10
+            --cpu=1
+            --memory=512Mi
+            --concurrency=80
+            --timeout=300
+
+      - name: Deploy worker service
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: annex-worker
+          image: ${{ needs.image.outputs.image }}
+          region: ${{ env.GOOGLE_CLOUD_REGION }}
+          env_vars: |-
+            APP_ENV=production
+            LOG_LEVEL=INFO
+            FIREBASE_PROJECT_ID=<firebase-project-id>
+            OCR_LANGUAGES=eng
+            RATE_LIMIT_DEFAULT=120/minute
+            RATE_LIMIT_ANALYSIS=20/minute
+          secrets: |-
+            DATABASE_URL=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-database-url/versions/latest
+            REDIS_URL=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-redis-url/versions/latest
+            CELERY_BROKER_URL=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-celery-broker-url/versions/latest
+            CELERY_RESULT_BACKEND=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-celery-result-backend/versions/latest
+            OPENAI_API_KEY=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-openai-api-key/versions/latest
+            GEMINI_API_KEY=projects/${{ env.GOOGLE_CLOUD_PROJECT }}/secrets/annex-gemini-api-key/versions/latest
+          flags: |-
+            --min-instances=1
+            --max-instances=1
+            --cpu=1
+            --memory=1Gi
+            --command=celery
+            --args=-A,app.infrastructure.tasks.celery_app:celery_app,worker,--loglevel=info,--concurrency=2

@@ -1,0 +1,85 @@
+# =====================================================================
+# ANNEX — Cloud Run service manifest: Celery worker (Phase 11)
+#
+# Apply with (after substituting the <placeholders>):
+#   gcloud run services replace deploy/cloudrun/worker.yaml --region <region>
+#
+# The worker is a long-running process, not an HTTP service. It runs
+# with minScale=1 so one instance stays warm; Cloud Run may recycle
+# instances, and Celery redelivers broker tasks after the visibility
+# timeout, so a recycle is safe. Heavier pipelines can instead run this
+# same image on a long-lived host (see docs/guides/deployment.md).
+#
+# Full walkthrough: docs/guides/deployment.md
+# =====================================================================
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: annex-worker
+  namespace: "<gcp-project-id>"
+  labels:
+    app: annex
+    component: worker
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      timeoutSeconds: 300
+      serviceAccountName: "<service-account-email>"
+      containers:
+        - name: annex-worker
+          image: "<image-ref>"
+          command:
+            - celery
+            - -A
+            - app.infrastructure.tasks.celery_app:celery_app
+            - worker
+            - --loglevel=info
+            - --concurrency=2
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: annex-database-url
+                  key: "1"
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: annex-redis-url
+                  key: "1"
+            - name: CELERY_BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: annex-celery-broker-url
+                  key: "1"
+            - name: CELERY_RESULT_BACKEND
+              valueFrom:
+                secretKeyRef:
+                  name: annex-celery-result-backend
+                  key: "1"
+            - name: FIREBASE_PROJECT_ID
+              value: "<firebase-project-id>"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: annex-openai-api-key
+                  key: "1"
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: annex-gemini-api-key
+                  key: "1"
+            - name: OCR_LANGUAGES
+              value: "eng"
+          resources:
+            limits:
+              cpu: "1"
+              memory: "1Gi"

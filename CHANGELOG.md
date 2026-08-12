@@ -246,10 +246,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ``.github/workflows/extension.yml`` — typecheck, lint, format, test,
     build, and dist-layout verification in CI.
 
+- **Deployment & release (Phase 11).**
+  - `docs/guides/deployment.md` — comprehensive deployment guide:
+    target topology, release flow, full configuration reference,
+    Supabase migration application, Cloud Run (API + worker services,
+    Workload Identity Federation, Secret Manager), managed Redis, the
+    Flutter web hosting pipeline (Firebase Hosting), extension store
+    packaging, health checks/observability, rollback, troubleshooting,
+    and a go-live checklist.
+  - `docker/backend.Dockerfile` hardened to a multi-stage build: the
+    builder stage installs the pinned package into an isolated prefix;
+    the slim non-root runtime copies only runtime artifacts, with OCI
+    labels (version stamped by the release pipeline) and the existing
+    liveness healthcheck.
+  - `docker/compose.prod.yml` — production-ish single-host stack
+    (backend + worker + Redis) mirroring the Cloud Run topology, with
+    the Firebase service-account JSON injected at runtime via a compose
+    secret (never baked into images); every required secret fails fast
+    with `:?` interpolation errors.
+  - `deploy/cloudrun/` — declarative Cloud Run service manifests:
+    `api.yaml` (scales to zero, concurrency 80, Secret Manager refs)
+    and `worker.yaml` (one warm instance running the Celery command);
+    both omit `FIREBASE_SERVICE_ACCOUNT_PATH` so Firebase Admin uses
+    ADC (Workload Identity Federation).
+  - `scripts/release.sh` / `scripts/release.ps1` — release cut:
+    strict semver validation, clean-tree and duplicate-tag guards,
+    CHANGELOG `[Unreleased]` → dated `[X.Y.Z]` section plus a fresh
+    `[Unreleased]`, a `chore(repo): release vX.Y.Z` bump commit, and
+    the annotated `vX.Y.Z` tag; `--dry-run` preview mode.
+  - `.github/workflows/docker.yml` now scans the built image with Trivy
+    (CRITICAL/HIGH vulnerabilities fail the build) and uploads the
+    SARIF report as an artifact.
+  - `.github/workflows/release.yml` — on a `v*` tag push: builds and
+    scans the image, publishes it to GHCR (`ghcr.io/<repo>/backend`:
+    semver + `latest` tags), then deploys `annex-api` and `annex-worker`
+    to Cloud Run via Workload Identity Federation; the deploy job is
+    skipped until the Google Cloud secrets are configured.
+  - `.github/workflows/security.yml` — dependency vulnerability audits
+    on every PR and push to main: `pip-audit` for the backend and
+    `npm audit --audit-level=high` for the extension.
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
   baseline (status, links, documentation index).
+- Root `README.md`, `docs/README.md`, `docker/README.md`,
+  `scripts/README.md`, `.github/workflows/README.md`, and
+  `apps/web/README.md` updated for the Phase 11 deployment baseline
+  (status, documentation index, script/workflow tables).
 
 ### Deprecated
 

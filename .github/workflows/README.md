@@ -13,13 +13,8 @@ integration and delivery pipeline.
 | `dart.yml` | Phase 8 | Format, analyze, test for pure-Dart packages (`shared_utils`) |
 | `flutter.yml` | Phase 9 | Format, analyze, test for Flutter app + packages |
 | `extension.yml` | Phase 10 | Typecheck, ESLint, Prettier, vitest, build for the browser extension |
-
-## Planned additions
-
-| Workflow | Introduced in | Purpose |
-|---|---|---|
-| `release.yml` | Phase 11 | Versioned builds, Firebase Hosting deploy, Cloud Run deploy |
-| `security.yml` | Phase 11 | Dependency vulnerability scanning + SAST |
+| `release.yml` | Phase 11 | On `v*` tags: build, scan, publish to GHCR, deploy to Cloud Run |
+| `security.yml` | Phase 11 | Dependency vulnerability scanning (`pip-audit` + `npm audit`) |
 
 ## Policy
 

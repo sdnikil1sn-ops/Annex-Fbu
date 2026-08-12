@@ -19,10 +19,11 @@ repository as the code.
 | `guides/developer-guide.md` | ✅ Created | 2 |
 | `guides/testing.md` | ✅ Created | 2 |
 | `guides/security.md` | Planned | 5 |
-| `guides/deployment.md` | Planned | 11 |
+| `guides/deployment.md` | ✅ Created | 11 |
 | `i18n/architecture.md` | ✅ Created | 8 |
 | `apps/` (mobile) | ✅ Flutter app scaffold + core features | 9 |
 | `apps/` (extension) | ✅ React + TS MV3 browser extension | 10 |
+| `deploy/` (Cloud Run manifests) | ✅ Created — `deploy/cloudrun/` API + worker | 11 |
 
 ## Standards
 

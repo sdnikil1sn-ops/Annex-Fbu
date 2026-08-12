@@ -1,0 +1,85 @@
+# =====================================================================
+# ANNEX — production compose stack (Phase 11)
+#
+#   docker compose -f docker/compose.prod.yml up -d --build
+#
+# A production-ish single-host stack for self-managed deployments or a
+# local dress rehearsal of the Cloud Run topology (API + worker + Redis).
+# Managed deployments (Cloud Run) use deploy/cloudrun/*.yaml instead —
+# see docs/guides/deployment.md.
+#
+# Secrets are never baked into images: the Firebase service-account JSON
+# is injected at runtime from ./secrets/firebase-service-account.json via
+# a compose secret (mounted at /run/secrets/firebase_service_account).
+# =====================================================================
+name: annex-prod
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    image: ${ANNEX_IMAGE:-ghcr.io/annex/annex-backend}:${ANNEX_VERSION:-latest}
+    command: ["annex-api"]
+    restart: unless-stopped
+    environment: &annex-prod-env
+      APP_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required (Supabase pooled URL)}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?FIREBASE_PROJECT_ID is required}
+      FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase_service_account
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OCR_LANGUAGES: ${OCR_LANGUAGES:-eng}
+      RATE_LIMIT_DEFAULT: ${RATE_LIMIT_DEFAULT:-120/minute}
+      RATE_LIMIT_ANALYSIS: ${RATE_LIMIT_ANALYSIS:-20/minute}
+      I18N_DEFAULT_LOCALE: ${I18N_DEFAULT_LOCALE:-en}
+      I18N_BUNDLE_CACHE_TTL: ${I18N_BUNDLE_CACHE_TTL:-300}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-["https://app.annex.example"]}
+    ports:
+      - "${ANNEX_PORT:-8000}:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    secrets:
+      - firebase_service_account
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    image: ${ANNEX_IMAGE:-ghcr.io/annex/annex-backend}:${ANNEX_VERSION:-latest}
+    command:
+      - celery
+      - -A
+      - app.infrastructure.tasks.celery_app:celery_app
+      - worker
+      - --loglevel=info
+      - --concurrency=${CELERY_CONCURRENCY:-2}
+    restart: unless-stopped
+    environment: *annex-prod-env
+    depends_on:
+      redis:
+        condition: service_healthy
+    secrets:
+      - firebase_service_account
+
+  # Self-hosted Redis for the single-host stack. Managed deployments
+  # (Cloud Memorystore / Upstash) set REDIS_URL externally and drop this
+  # service (and its depends_on above).
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+# Compose secrets mount as files under /run/secrets/<name>.
+secrets:
+  firebase_service_account:
+    file: ./secrets/firebase-service-account.json

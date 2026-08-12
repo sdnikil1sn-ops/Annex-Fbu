@@ -32,4 +32,7 @@ shell, theming, and entry-point code.
 
 - **Phase 1:** directory documented and reserved.
 - **Phase 8:** Flutter Web project scaffold, PWA setup, shared-shell wiring.
-- **Phase 11:** Firebase Hosting deployment pipeline.
+- **Phase 11 (documented):** Firebase Hosting deployment steps in
+  `docs/guides/deployment.md` §11. The hosting pipeline activates when the
+  web build entry lands (Flutter Web build → `firebase deploy --only hosting`
+  → wire `ALLOWED_ORIGINS` + Firebase authorized domains).

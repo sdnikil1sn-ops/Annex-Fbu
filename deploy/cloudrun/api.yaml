@@ -1,0 +1,89 @@
+# =====================================================================
+# ANNEX — Cloud Run service manifest: API (Phase 11)
+#
+# Apply with (after substituting the <placeholders>):
+#   gcloud run services replace deploy/cloudrun/api.yaml --region <region>
+#
+# Secrets come from Google Cloud Secret Manager (secretKeyRef.key is the
+# Secret version — "1" is the first version, "latest" also works). The
+# API authenticates with Firebase Admin via Workload Identity Federation
+# (ADC), so FIREBASE_SERVICE_ACCOUNT_PATH is omitted on Cloud Run.
+#
+# Full walkthrough: docs/guides/deployment.md
+# =====================================================================
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: annex-api
+  namespace: "<gcp-project-id>"
+  labels:
+    app: annex
+    component: api
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      serviceAccountName: "<service-account-email>"
+      containers:
+        - name: annex-api
+          image: "<image-ref>"
+          command: ["annex-api"]
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: ALLOWED_ORIGINS
+              value: '["https://<app-domain>"]'
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: annex-database-url
+                  key: "1"
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: annex-redis-url
+                  key: "1"
+            - name: CELERY_BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: annex-celery-broker-url
+                  key: "1"
+            - name: CELERY_RESULT_BACKEND
+              valueFrom:
+                secretKeyRef:
+                  name: annex-celery-result-backend
+                  key: "1"
+            - name: FIREBASE_PROJECT_ID
+              value: "<firebase-project-id>"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: annex-openai-api-key
+                  key: "1"
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: annex-gemini-api-key
+                  key: "1"
+            - name: OCR_LANGUAGES
+              value: "eng"
+            - name: RATE_LIMIT_DEFAULT
+              value: "120/minute"
+            - name: RATE_LIMIT_ANALYSIS
+              value: "20/minute"
+            - name: I18N_DEFAULT_LOCALE
+              value: "en"
+            - name: I18N_BUNDLE_CACHE_TTL
+              value: "300"
+          resources:
+            limits:
+              cpu: "1"
+              memory: "512Mi"

@@ -1,0 +1,65 @@
+# =====================================================================
+# ANNEX — Dependency security scanning (Phase 11)
+# Audits third-party dependencies for known vulnerabilities on every PR
+# and push to main: pip-audit for the backend, npm audit for the browser
+# extension. Container scanning lives in docker.yml; the release gate is
+# release.yml. None of these jobs can fail the pipeline silently — each
+# exits non-zero when findings exceed the configured threshold.
+# =====================================================================
+
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend dependencies (pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install backend and audit dependencies
+        run: |
+          cd backend
+          python -m pip install --quiet .
+          python -m pip install --quiet pip-audit
+          python -m pip_audit
+
+  extension:
+    name: Extension dependencies (npm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install extension dependencies and audit
+        run: |
+          cd apps/extension
+          npm install
+          npm audit --audit-level=high

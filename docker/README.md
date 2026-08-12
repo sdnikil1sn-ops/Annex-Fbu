@@ -7,10 +7,10 @@ Docker assets for ANNEX: local development orchestration and production images.
 ```text
 docker/
 ├── compose.dev.yml           # ✅ Local dev: backend, Redis, Celery worker (Phase 7)
-├── compose.prod.yml          # Production-ish services (Cloud Run compatible) — Phase 11
-├── backend.Dockerfile        # ✅ API + worker image (Phase 7)
+├── compose.prod.yml          # ✅ Production-ish services (Cloud Run compatible) — Phase 11
+├── backend.Dockerfile        # ✅ API + worker image, multi-stage hardened (Phase 7 → 11)
 ├── worker.Dockerfile         # (separate image not needed — same runtime, different command)
-├── extension.Dockerfile      # (optional) static extension build — Phase 10/11
+├── extension.Dockerfile      # (not needed — the extension is a static MV3 build, Phase 10)
 └── .dockerignore
 ```
 
@@ -32,6 +32,9 @@ docker/
   Start it with `docker compose -f docker/compose.dev.yml up --build` (or
   `scripts/dev.sh` / `scripts/dev.ps1`); the database runs separately via
   `supabase start` (Phase 4).
-- **Phase 11:** production compose, multi-stage hardening, image scanning in CI
-  (`docker.yml` currently only builds), Cloud Run manifests, and the release
-  pipeline.
+- **Phase 11 (done):** production compose (`compose.prod.yml`) mirroring the
+  Cloud Run topology, multi-stage hardening of `backend.Dockerfile` (builder
+  → slim non-root runtime with OCI labels), Trivy image scanning in
+  `docker.yml`, Cloud Run service manifests (`deploy/cloudrun/`), and the
+  release pipeline (`scripts/release.sh` / `.ps1`,
+  `.github/workflows/release.yml`). See `docs/guides/deployment.md`.

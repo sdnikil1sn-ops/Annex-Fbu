@@ -10,6 +10,7 @@ ANNEX. Scripts keep developer commands consistent across machines and CI.
 | [`validate_repo.py`](./validate_repo.py) | Repository health: YAML syntax, markdown links, required files, secret patterns. Runs locally and in CI (`ci.yml`). |
 | [`generate_openapi.py`](./generate_openapi.py) | Regenerate `docs/api/openapi.yaml` from the FastAPI application (Phase 3+). |
 | [`dev.sh`](./dev.sh) / [`dev.ps1`](./dev.ps1) | Start the local dev stack — Redis, API, and Celery worker via `docker compose` (Phase 7). |
+| [`release.sh`](./release.sh) / [`release.ps1`](./release.ps1) | Cut a release: semver check, CHANGELOG bump, bump commit, annotated `vX.Y.Z` tag (Phase 11). |
 
 ## Planned scripts (added with their targets)
 
@@ -18,8 +19,7 @@ scripts/
 ├── bootstrap.sh / .ps1       # First-time setup (deps, env templates) — Phase 3
 ├── lint.sh / .ps1            # Run all linters/formatters — Phase 3
 ├── test.sh / .ps1            # Run all test suites — Phase 3
-├── build.sh / .ps1           # Build targets for all apps — Phase 8
-└── release.sh / .ps1         # Version bump + changelog + tag — Phase 11
+└── build.sh / .ps1           # Build targets for all apps — Phase 8
 ```
 
 ## Rules

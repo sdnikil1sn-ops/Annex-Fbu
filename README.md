@@ -9,7 +9,7 @@ image forensics, and source credibility scoring with structured media-literacy e
 
 | | |
 |---|---|
-| **Status** | Architecture (Phase 2) — in active development |
+| **Status** | Phases 1–11 complete — in active development (see [CHANGELOG](./CHANGELOG.md)) |
 | **License** | [Apache-2.0](./LICENSE) |
 | **Version** | 0.1.0 (see [CHANGELOG](./CHANGELOG.md)) |
 | **Platforms** | Android · iOS · Web · Windows · Linux · macOS · Browser extensions |
@@ -78,14 +78,16 @@ annex/
 
 ## Getting started
 
-> The repository is currently in **Phase 2 (Architecture & Documentation)** —
-> no application code exists yet; the blueprint for it is complete.
+> Phases 1–11 are implemented: architecture blueprint, FastAPI backend
+> (auth, AI/OCR, async pipelines, i18n), Flutter mobile app, React browser
+> extension, and the deployment/release pipeline. Each phase is documented
+> in the [CHANGELOG](./CHANGELOG.md).
 
 - [Installation guide](docs/guides/installation.md) — install and verify the full toolchain
 - [Developer guide](docs/guides/developer-guide.md) — how the monorepo works day-to-day
 - [Testing guide](docs/guides/testing.md) — test strategy and commands
 - [Architecture overview](docs/architecture/overview.md) — how ANNEX is built
-- Deployment guide — *scheduled for Phase 11*
+- [Deployment guide](docs/guides/deployment.md) — Cloud Run, Firebase Hosting, Redis, and the release flow (Phase 11)
 
 See [docs/README.md](docs/README.md) for the full documentation index.
 
