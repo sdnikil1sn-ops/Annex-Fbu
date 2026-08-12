@@ -8,7 +8,7 @@ import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_utils/shared_utils.dart';
 
 import '../../app/app_scope.dart';
-import '../../l10n/i18n_controller.dart';
+import '../../i18n/i18n_controller.dart';
 import '../auth/auth_controller.dart';
 import 'settings_controller.dart';
 

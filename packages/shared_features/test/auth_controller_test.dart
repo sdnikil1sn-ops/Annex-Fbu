@@ -1,6 +1,5 @@
-import 'package:annex_mobile/features/auth/auth_controller.dart';
-import 'package:annex_mobile/features/auth/mock_auth_gateway.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_features/shared_features.dart';
 
 void main() {
   test('starts signed out and reacts to anonymous sign-in', () async {

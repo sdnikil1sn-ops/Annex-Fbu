@@ -9,7 +9,7 @@ image forensics, and source credibility scoring with structured media-literacy e
 
 | | |
 |---|---|
-| **Status** | Phases 1–11 complete — in active development (see [CHANGELOG](./CHANGELOG.md)) |
+| **Status** | Phases 1–12 complete — in active development (see [CHANGELOG](./CHANGELOG.md)) |
 | **License** | [Apache-2.0](./LICENSE) |
 | **Version** | 0.1.0 (see [CHANGELOG](./CHANGELOG.md)) |
 | **Platforms** | Android · iOS · Web · Windows · Linux · macOS · Browser extensions |
@@ -78,10 +78,11 @@ annex/
 
 ## Getting started
 
-> Phases 1–11 are implemented: architecture blueprint, FastAPI backend
-> (auth, AI/OCR, async pipelines, i18n), Flutter mobile app, React browser
-> extension, and the deployment/release pipeline. Each phase is documented
-> in the [CHANGELOG](./CHANGELOG.md).
+> Phases 1–12 are implemented: architecture blueprint, FastAPI backend
+> (auth, AI/OCR, async pipelines, i18n), Flutter mobile app + web app
+> (shared features in `packages/shared_features`), React browser
+> extension, and the deployment/release pipeline (Cloud Run + Firebase
+> Hosting). Each phase is documented in the [CHANGELOG](./CHANGELOG.md).
 
 - [Installation guide](docs/guides/installation.md) — install and verify the full toolchain
 - [Developer guide](docs/guides/developer-guide.md) — how the monorepo works day-to-day

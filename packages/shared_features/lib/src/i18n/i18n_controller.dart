@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_utils/shared_utils.dart';
 
-import '../core/api/analysis_api.dart';
+import '../api/analysis_api.dart';
 
 /// Loads and serves runtime translations for one locale.
 class I18nController extends ChangeNotifier {

@@ -1,9 +1,9 @@
 # ANNEX — Deployment Guide
 
-> **Phase 11.** How ANNEX ships to production: the release flow, the
+> **Phase 11 → 12.** How ANNEX ships to production: the release flow, the
 > production container stack, and per-target deployment walkthroughs for
 > the backend (Cloud Run), database (Supabase), Redis, the Flutter web
-> app (Firebase Hosting), and the browser extension.
+> app (Firebase Hosting, added in Phase 12), and the browser extension.
 
 ---
 
@@ -332,19 +332,45 @@ migration.
 
 ## 11. Web app (Firebase Hosting)
 
-> The Flutter Web entry (`apps/web`) is scaffolded; the hosting pipeline
-> activates when the web build exists. This section is the Phase 11
-> contract for it.
+> Implemented in Phase 12. `apps/web` is a real Flutter Web app that
+> shares every feature with the mobile app through
+> `packages/shared_features`; it contributes the responsive shell, PWA
+> entry, and the Firebase Hosting configuration.
 
-1. `flutter build web` (from the monorepo web app) produces `build/web`.
-2. `firebase init hosting` in `apps/web` — public dir `build/web`,
-   single-page app rewrite, and a `.firebaserc` bound to the hosting
-   site.
-3. Deploy with `firebase deploy --only hosting` (manual) or a
-   `firebase-hosting-merge` GitHub Action job triggered after the
-   Flutter CI build (Phase 11 `release.yml` extension).
-4. Point `ALLOWED_ORIGINS` at the hosting URL (`https://<site>.web.app`)
-   and whitelist it in Firebase Auth authorized domains.
+1. **Build** — from `apps/web`, `flutter build web --release` produces
+   `build/web`. Point it at the backend and disable the mock:
+
+   ```bash
+   flutter build web --release \
+     --dart-define=ANNEX_API_URL=https://api.annex.example \
+     --dart-define=ANNEX_USE_MOCK=false
+   ```
+
+2. **Deploy automatically on release tags** — the `deploy-web` job in
+   `.github/workflows/release.yml` builds the app in release mode and
+   deploys `build/web` to Firebase Hosting via
+   `FirebaseExtended/action-hosting-deploy@v0` (public dir `build/web`,
+   single-page rewrite, immutable caching for hashed assets — see
+   `apps/web/firebase.json`). The job is skipped until these are
+   configured:
+
+   | Secret / variable | Value |
+   |---|---|
+   | `FIREBASE_SERVICE_ACCOUNT` (secret) | Firebase service-account JSON with Hosting Admin |
+   | `FIREBASE_PROJECT_ID` (variable) | Firebase project id (matches `.firebaserc`) |
+   | `ANNEX_API_URL` (variable) | The Cloud Run API URL baked into the build |
+
+3. **Deploy manually** — from `apps/web`:
+
+   ```bash
+   firebase login
+   firebase use <project-id>      # or edit .firebaserc
+   firebase deploy --only hosting
+   ```
+
+4. **Wire the origins** — point `ALLOWED_ORIGINS` at the hosting URL
+   (`https://<site>.web.app`) and whitelist it in Firebase Auth
+   authorized domains.
 
 ---
 

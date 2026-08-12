@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../../l10n/i18n_controller.dart';
+import '../../i18n/i18n_controller.dart';
 
 /// Drives user-facing settings (language, theme).
 class SettingsController extends ChangeNotifier {

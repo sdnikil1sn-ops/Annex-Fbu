@@ -1,7 +1,7 @@
-name: annex_mobile
+name: annex_web
 description: >-
-  ANNEX mobile app — claim analysis, source credibility, and media
-  literacy (Learn Before You Believe). Flutter, six platforms.
+  ANNEX web app — the Flutter Web + PWA entry point of the same product
+  codebase as the mobile app. Hosted on Firebase Hosting (Phase 12).
 publish_to: 'none'
 
 version: 0.1.0+1
@@ -13,7 +13,9 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Shared monorepo packages (ADR-0002 / ADR-0007 / Phase 12).
+  # Shared monorepo packages (ADR-0002 / ADR-0007 / Phase 12): the web
+  # app contributes only its shell and entry point; features come from
+  # shared_features.
   shared_utils:
     path: ../../packages/shared_utils
   shared_models:
@@ -26,6 +28,9 @@ dependencies:
   # State + platform init.
   provider: ^6.1.0
   firebase_core: ^4.0.0
+  # Material adaptive icons reference the Cupertino icon font (keeps the
+  # web build warning-free when icon tree-shaking is on).
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:

@@ -11,7 +11,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_models/shared_models.dart';
 
-import '../../core/api/analysis_api.dart';
+import '../../api/analysis_api.dart';
 
 /// The lifecycle state of the analysis UI flow.
 enum AnalysisFlowState { idle, submitting, polling, completed, failed }

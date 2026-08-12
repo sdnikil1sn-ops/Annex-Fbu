@@ -1,8 +1,9 @@
 # =====================================================================
-# ANNEX — Flutter CI (Phase 9)
-# Runs when the Flutter app or a Flutter package changes: format,
-# static analysis, and tests for apps/mobile and packages/shared_ui.
-# Pure-Dart packages (shared_utils, shared_models) run in dart.yml.
+# ANNEX — Flutter CI (Phase 9 → 12)
+# Runs when a Flutter app or a Flutter package changes: format, static
+# analysis, and tests for apps/mobile, apps/web, and the Flutter
+# packages (shared_ui, shared_features). Pure-Dart packages
+# (shared_utils, shared_models) run in dart.yml.
 # =====================================================================
 
 name: Flutter
@@ -12,9 +13,11 @@ on:
     branches: [main]
     paths:
       - "apps/mobile/**"
+      - "apps/web/**"
       - "packages/shared_ui/**"
-      # shared_utils/shared_models are dependencies of the mobile app and
-      # are also exercised here (pure-Dart jobs live in dart.yml).
+      - "packages/shared_features/**"
+      # shared_utils/shared_models are dependencies of the Flutter apps
+      # and are also exercised here (pure-Dart jobs live in dart.yml).
       - "packages/shared_utils/**"
       - "packages/shared_models/**"
       - ".github/workflows/flutter.yml"
@@ -22,7 +25,9 @@ on:
     branches: [main]
     paths:
       - "apps/mobile/**"
+      - "apps/web/**"
       - "packages/shared_ui/**"
+      - "packages/shared_features/**"
       - "packages/shared_utils/**"
       - "packages/shared_models/**"
       - ".github/workflows/flutter.yml"
@@ -40,7 +45,7 @@ jobs:
   test:
     name: Format, analyze, test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Check out repository
@@ -68,6 +73,22 @@ jobs:
         working-directory: packages/shared_ui
         run: flutter test
 
+      - name: Install dependencies (shared_features)
+        working-directory: packages/shared_features
+        run: flutter pub get
+
+      - name: Format check (shared_features)
+        working-directory: packages/shared_features
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze (shared_features)
+        working-directory: packages/shared_features
+        run: flutter analyze
+
+      - name: Test (shared_features)
+        working-directory: packages/shared_features
+        run: flutter test
+
       - name: Install dependencies (mobile)
         working-directory: apps/mobile
         run: flutter pub get
@@ -82,4 +103,20 @@ jobs:
 
       - name: Test (mobile)
         working-directory: apps/mobile
+        run: flutter test
+
+      - name: Install dependencies (web)
+        working-directory: apps/web
+        run: flutter pub get
+
+      - name: Format check (web)
+        working-directory: apps/web
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze (web)
+        working-directory: apps/web
+        run: flutter analyze
+
+      - name: Test (web)
+        working-directory: apps/web
         run: flutter test

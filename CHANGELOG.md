@@ -286,6 +286,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     on every PR and push to main: `pip-audit` for the backend and
     `npm audit --audit-level=high` for the extension.
 
+- **Flutter Web app & Firebase Hosting (Phase 12).**
+  - `packages/shared_features` — the cross-platform Flutter feature layer:
+    the API client (+ explicit mock), the runtime i18n controller
+    (ADR-0007), the auth gateway with its Firebase implementation and
+    mock (ADR-0005), the analysis and settings controllers/screens, and
+    the `AppScope` composition root (ADR-0003). The mobile app's feature
+    code moved here, so every Flutter app keeps only its platform-specific
+    shell, theming, and entry-point code. 14 unit tests.
+  - `apps/mobile` refactored onto `shared_features`: the shell
+    (`AnnexApp`) and composition root now consume the shared package, and
+    the widget suite still covers the full sign-in gate and
+    submit → poll → report flow (3 tests).
+  - `apps/web` — the real Flutter Web app: a responsive `WebShell`
+    (navigation rail on wide viewports, bottom navigation bar on narrow
+    ones) reusing every shared feature, a PWA entry (`web/index.html`,
+    `web/manifest.json`, generated 192/512 icons via
+    `scripts/generate_icons.mjs`), runtime config through `--dart-define`,
+    and 4 widget tests covering the sign-in gate, both layouts, and the
+    full analysis flow.
+  - Firebase Hosting config: `apps/web/firebase.json` (public
+    `build/web`, SPA rewrite, immutable caching for hashed assets,
+    no-cache service worker) and `.firebaserc` bound to the hosting site.
+  - `.github/workflows/flutter.yml` extended to format/analyze/test
+    `apps/web` and `packages/shared_features` in CI.
+  - `.github/workflows/release.yml` gains a `deploy-web` job: on a `v*`
+    tag it builds the web app in release mode (`ANNEX_API_URL`,
+    `ANNEX_USE_MOCK=false`) and deploys it to Firebase Hosting via
+    `FirebaseExtended/action-hosting-deploy`; skipped until the
+    `FIREBASE_SERVICE_ACCOUNT` secret is configured.
+  - `docs/guides/deployment.md` §11 updated: the hosting pipeline is now
+    implemented end to end (web build → `deploy-web` job → wire
+    `ALLOWED_ORIGINS` + Firebase Auth authorized domains).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -294,6 +327,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `scripts/README.md`, `.github/workflows/README.md`, and
   `apps/web/README.md` updated for the Phase 11 deployment baseline
   (status, documentation index, script/workflow tables).
+- Root `README.md`, `docs/README.md`, `packages/README.md`,
+  `apps/mobile/README.md`, `apps/web/README.md`, and
+  `.github/workflows/README.md` updated for the Phase 12 web baseline
+  (status, package/workflow tables, mobile feature-code relocation).
 
 ### Deprecated
 

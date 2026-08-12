@@ -21,7 +21,9 @@ repository as the code.
 | `guides/security.md` | Planned | 5 |
 | `guides/deployment.md` | ✅ Created | 11 |
 | `i18n/architecture.md` | ✅ Created | 8 |
-| `apps/` (mobile) | ✅ Flutter app scaffold + core features | 9 |
+| `apps/` (mobile) | ✅ Flutter app — shell + entry point (features shared via `shared_features`) | 9 → 12 |
+| `apps/` (web) | ✅ Flutter Web app + PWA + Firebase Hosting config | 12 |
+| `packages/shared_features` | ✅ Shared Flutter features: controllers, gateways, screens, `AppScope` | 12 |
 | `apps/` (extension) | ✅ React + TS MV3 browser extension | 10 |
 | `deploy/` (Cloud Run manifests) | ✅ Created — `deploy/cloudrun/` API + worker | 11 |
 

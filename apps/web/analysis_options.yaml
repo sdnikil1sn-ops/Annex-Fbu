@@ -1,0 +1,2 @@
+# ANNEX web app — Flutter lints (same set as the mobile app).
+include: package:flutter_lints/flutter.yaml

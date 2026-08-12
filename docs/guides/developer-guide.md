@@ -8,10 +8,11 @@ day-to-day playbook.
 
 | Path | What lives there |
 |---|---|
-| `apps/mobile/` | Flutter app (Android/iOS/Win/Linux/macOS) — Phase 8+ |
-| `apps/web/` | Flutter Web entry + PWA — Phase 8+ |
+| `apps/mobile/` | Flutter app (Android/iOS/Win/Linux/macOS) — shell + entry point — Phase 8+ |
+| `apps/web/` | Flutter Web app + PWA + Firebase Hosting — Phase 12 |
 | `apps/extension/` | React + TS browser extension (MV3) — Phase 10 |
 | `backend/` | FastAPI service layer + Celery workers — Phase 3+ |
+| `packages/shared_features/` | Shared Flutter features (controllers, gateways, screens, `AppScope`) — Phase 12 |
 | `packages/shared_models/` | Canonical contracts (JSON Schema + Dart) |
 | `packages/shared_ui/` | Flutter design system |
 | `packages/shared_utils/` | Pure-Dart utilities |

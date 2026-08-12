@@ -1,18 +1,15 @@
-/// ANNEX app shell — theme, DI scope, and root navigation.
+/// ANNEX mobile app shell — theme, DI scope, and root navigation.
+///
+/// All features (auth, analysis, settings, i18n) come from
+/// `shared_features` (Phase 12); this file contributes only the mobile
+/// shell: MaterialApp wiring and the bottom-tab navigation.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_features/shared_features.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_utils/shared_utils.dart';
-
-import '../features/analysis/analysis_controller.dart';
-import '../features/analysis/analysis_screen.dart';
-import '../features/auth/auth_controller.dart';
-import '../features/auth/sign_in_screen.dart';
-import '../features/settings/settings_controller.dart';
-import '../features/settings/settings_screen.dart';
-import 'app_scope.dart';
 
 /// The root widget of the ANNEX mobile app.
 class AnnexApp extends StatelessWidget {

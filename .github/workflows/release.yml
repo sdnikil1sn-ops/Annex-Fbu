@@ -1,16 +1,22 @@
 # =====================================================================
-# ANNEX — Release pipeline (Phase 11)
+# ANNEX — Release pipeline (Phase 11 → 12)
 # Triggered by a v* tag push (created by scripts/release.sh):
 #   1. Builds the backend/worker image from the tagged tree.
 #   2. Scans it with Trivy (CRITICAL/HIGH fails the release).
 #   3. Publishes the image to GHCR (ghcr.io/<repo>/backend).
 #   4. Deploys the API + worker services to Cloud Run via Workload
-#      Identity Federation — the deploy job is skipped until the Google
-#      Cloud secrets below are configured.
+#      Identity Federation.
+#   5. Builds the Flutter Web app and deploys it to Firebase Hosting
+#      (Phase 12) — both deploy jobs are skipped until their secrets
+#      are configured.
 #
-# Required repository secrets (deploy job only):
-#   GOOGLE_CLOUD_PROJECT, GOOGLE_WORKLOAD_IDENTITY_PROVIDER,
-#   GOOGLE_SERVICE_ACCOUNT  and variable GOOGLE_CLOUD_REGION.
+# Required repository secrets/variables (deploy jobs only):
+#   Cloud Run:  GOOGLE_CLOUD_PROJECT, GOOGLE_WORKLOAD_IDENTITY_PROVIDER,
+#               GOOGLE_SERVICE_ACCOUNT (secrets) + GOOGLE_CLOUD_REGION
+#               and ANNEX_API_URL (variables).
+#   Hosting:    FIREBASE_SERVICE_ACCOUNT (secret — Firebase service
+#               account JSON) + FIREBASE_PROJECT_ID and ANNEX_API_URL
+#               (variables).
 # =====================================================================
 
 name: Release
@@ -180,3 +186,42 @@ jobs:
             --memory=1Gi
             --command=celery
             --args=-A,app.infrastructure.tasks.celery_app:celery_app,worker,--loglevel=info,--concurrency=2
+
+  deploy-web:
+    name: Deploy web app to Firebase Hosting
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Skipped until FIREBASE_SERVICE_ACCOUNT (Firebase service-account
+    # JSON with Hosting Admin) is configured as a repository secret.
+    if: env.FIREBASE_SERVICE_ACCOUNT != ''
+    permissions:
+      contents: read
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies (web)
+        working-directory: apps/web
+        run: flutter pub get
+
+      - name: Build web (release)
+        working-directory: apps/web
+        run: |
+          flutter build web --release \
+            --dart-define=ANNEX_API_URL=${{ vars.ANNEX_API_URL || 'https://api.annex.example' }} \
+            --dart-define=ANNEX_USE_MOCK=false
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+          entryPoint: apps/web

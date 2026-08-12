@@ -11,9 +11,9 @@ integration and delivery pipeline.
 | `backend.yml` | Phase 3 | Ruff, mypy, pytest with coverage for the FastAPI service |
 | `docker.yml` | Phase 7 | Build and scan container images |
 | `dart.yml` | Phase 8 | Format, analyze, test for pure-Dart packages (`shared_utils`) |
-| `flutter.yml` | Phase 9 | Format, analyze, test for Flutter app + packages |
+| `flutter.yml` | Phase 9 → 12 | Format, analyze, test for Flutter apps (mobile + web) + Flutter packages (`shared_ui`, `shared_features`) |
 | `extension.yml` | Phase 10 | Typecheck, ESLint, Prettier, vitest, build for the browser extension |
-| `release.yml` | Phase 11 | On `v*` tags: build, scan, publish to GHCR, deploy to Cloud Run |
+| `release.yml` | Phase 11 → 12 | On `v*` tags: build, scan, publish to GHCR, deploy to Cloud Run + Firebase Hosting |
 | `security.yml` | Phase 11 | Dependency vulnerability scanning (`pip-audit` + `npm audit`) |
 
 ## Policy

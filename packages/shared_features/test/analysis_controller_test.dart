@@ -1,7 +1,5 @@
-import 'package:annex_mobile/core/api/analysis_api.dart';
-import 'package:annex_mobile/core/api/mock_analysis_api.dart';
-import 'package:annex_mobile/features/analysis/analysis_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_features/shared_features.dart';
 import 'package:shared_models/shared_models.dart';
 
 void main() {

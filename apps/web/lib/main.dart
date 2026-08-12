@@ -1,9 +1,9 @@
-/// ANNEX mobile app entry point.
+/// ANNEX web app entry point (Phase 12).
 ///
-/// Wires the composition root: Firebase Auth (when available), the API
-/// client (HTTP or the explicit mock in debug), and the runtime i18n
-/// loader, then builds the app scope. All feature code comes from
-/// `shared_features`; this entry point stays platform-specific (Phase 12).
+/// Wires the composition root exactly like the mobile app: Firebase Auth
+/// (when available), the API client (HTTP or the explicit mock in debug),
+/// and the runtime i18n loader, then builds the app scope around the
+/// responsive web shell. All feature code comes from `shared_features`.
 library;
 
 import 'dart:async';
@@ -13,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_features/shared_features.dart';
 
-import 'app/annex_app.dart';
+import 'app/web_shell.dart';
 import 'core/config.dart';
 
 Future<void> main() async {
@@ -54,7 +54,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: i18n),
         ChangeNotifierProvider.value(value: settings),
       ],
-      child: AppScope(services: services, child: const AnnexApp()),
+      child: AppScope(services: services, child: const WebApp()),
     ),
   );
 

@@ -1,17 +1,18 @@
 /// Composition root — holds the app's services for inherited lookup.
 ///
-/// Built once in `main()` (or by tests with mocks injected); widgets
-/// resolve services through [AppScope.of]. This keeps dependencies
-/// explicit and injectable (ADR-0003) without a service locator.
+/// Built once in the app's `main()` (or by tests with mocks injected);
+/// widgets resolve services through [AppScope.of]. This keeps dependencies
+/// explicit and injectable (ADR-0003) without a service locator. Shared by
+/// every Flutter app via `packages/shared_features` (Phase 12).
 library;
 
 import 'package:flutter/widgets.dart';
 
-import '../core/api/analysis_api.dart';
-import '../features/auth/auth_controller.dart';
+import '../api/analysis_api.dart';
 import '../features/analysis/analysis_controller.dart';
+import '../features/auth/auth_controller.dart';
 import '../features/settings/settings_controller.dart';
-import '../l10n/i18n_controller.dart';
+import '../i18n/i18n_controller.dart';
 
 /// The services wired at the composition root.
 class AppServices {

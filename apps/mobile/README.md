@@ -38,26 +38,27 @@ mobile/
   analysis flow (submit text → poll → render the claim report), Firebase
   Auth SDK gateway (anonymous/email/Google) with an explicit mock,
   runtime i18n wired to the backend bundles through `StringKeys`, and
-  settings (language/theme). 17 unit + widget tests.
+  settings (language/theme).
+- **Phase 12 (done):** feature code extracted to
+  `packages/shared_features` and shared with the web app; the app now
+  contributes only its platform-specific shell and entry point.
 
-## Implemented (Phase 9)
+## Implemented (Phase 9 → 12)
 
 ```text
 mobile/
 ├── lib/
 │   ├── main.dart             # Composition root: Firebase + API + i18n wiring
-│   ├── app/                  # App shell (AnnexApp, AppScope DI, navigation)
-│   ├── core/
-│   │   ├── config.dart       # API base URL via --dart-define
-│   │   └── api/              # AnalysisApi (HTTP) + MockAnalysisApi
-│   ├── features/
-│   │   ├── auth/             # AuthGateway + Firebase impl + mock + controller
-│   │   ├── analysis/         # AnalysisController (submit + poll) + screen
-│   │   └── settings/         # Language/theme settings + screen
-│   └── l10n/                 # I18nController: runtime bundle loading
-├── test/                     # Controller + widget tests (17)
+│   ├── app/annex_app.dart    # Mobile shell: MaterialApp + bottom tabs
+│   └── core/config.dart      # API base URL via --dart-define
+├── test/                     # Widget tests (3): sign-in gate + full flow
 └── pubspec.yaml
 ```
+
+All feature code — the API client, auth gateway (Firebase impl + mock),
+runtime i18n, the analysis and settings flows, and the `AppScope`
+composition root — lives in `packages/shared_features` (Phase 12) and is
+shared with `apps/web`.
 
 Run it: `flutter run` (debug builds use the mock API; point at the real
 backend with `--dart-define=ANNEX_API_URL=... --dart-define=ANNEX_USE_MOCK=false`).

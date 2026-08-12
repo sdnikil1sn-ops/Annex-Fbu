@@ -1,4 +1,4 @@
-import 'package:annex_mobile/app/annex_app.dart';
+import 'package:annex_web/app/web_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +26,7 @@ Widget _wrap(AppServices services) {
       ChangeNotifierProvider.value(value: services.i18n),
       ChangeNotifierProvider.value(value: services.settings),
     ],
-    child: AppScope(services: services, child: const AnnexApp()),
+    child: AppScope(services: services, child: const WebApp()),
   );
 }
 
@@ -44,19 +44,44 @@ void main() {
     expect(find.text('Learn before you believe.'), findsOneWidget);
   });
 
-  testWidgets('signing in shows the analysis shell', (tester) async {
+  testWidgets('wide viewport shows the navigation rail after sign-in', (
+    tester,
+  ) async {
     final services = _buildServices();
     addTearDown(services.authController.dispose);
     addTearDown(services.i18n.dispose);
     addTearDown(services.settings.dispose);
     await services.i18n.load();
-
     await services.authController.signInAnonymously();
+
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_wrap(services));
     await tester.pumpAndSettle();
 
+    // Desktop layout: a rail is present, and the analysis input is visible.
+    expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Analyze text'), findsOneWidget);
+  });
+
+  testWidgets('narrow viewport shows the bottom navigation bar', (
+    tester,
+  ) async {
+    final services = _buildServices();
+    addTearDown(services.authController.dispose);
+    addTearDown(services.i18n.dispose);
+    addTearDown(services.settings.dispose);
+    await services.i18n.load();
+    await services.authController.signInAnonymously();
+
+    await tester.binding.setSurfaceSize(const Size(480, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_wrap(services));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
   });
 
   testWidgets('full flow: submit text and render the report', (tester) async {
