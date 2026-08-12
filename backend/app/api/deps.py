@@ -11,7 +11,9 @@ from typing import cast
 from fastapi import Request
 
 from app.api.errors import AppError
+from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerificationError, TokenVerifier
+from app.application.services.analysis_service import AnalysisService
 from app.application.services.user_service import UserService
 from app.core.config import Settings
 from app.domain.user import User
@@ -33,6 +35,45 @@ def _get_token_verifier(request: Request) -> TokenVerifier:
             status_code=503,
         )
     return verifier
+
+
+def get_analysis_service_dep(request: Request) -> AnalysisService:
+    """Return the bound analysis service, or 503 when it is not configured."""
+    service: AnalysisService | None = getattr(request.app.state, "analysis_service", None)
+    if service is None:
+        raise AppError(
+            "analysis.not_configured",
+            "Analysis processing is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_claim_analyzer_dep(request: Request) -> ClaimAnalyzer:
+    """Return the bound claim analyzer, or 503 when it is not configured."""
+    analyzer: ClaimAnalyzer | None = getattr(request.app.state, "claim_analyzer", None)
+    if analyzer is None:
+        raise AppError(
+            "analysis.not_configured",
+            "Analysis processing is not configured on this server.",
+            status_code=503,
+        )
+    return analyzer
+
+
+def get_optional_user(request: Request) -> User | None:
+    """Resolve the caller when a bearer token is supplied, else None.
+
+    Anonymous access: a missing token means an unauthenticated caller. A
+    supplied token is validated in full (invalid tokens still answer 401).
+
+    Raises:
+        AppError 401: a token was supplied but is invalid or expired.
+        AppError 503: authentication is not configured.
+    """
+    if not request.headers.get("Authorization"):
+        return None
+    return get_current_user(request)
 
 
 def get_current_user(request: Request) -> User:

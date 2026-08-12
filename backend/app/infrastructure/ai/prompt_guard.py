@@ -15,16 +15,19 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.ports.ai import GuardedPromptError
+
+# Re-exported so existing importers keep working; defined at the application
+# boundary (app.application.ports.ai) so services can handle it without
+# depending on infrastructure.
+__all__ = ["GuardedPromptError"]
+
 # Markers that label untrusted data inside prompts.
 DATA_OPEN = "<<<UNTRUSTED_DATA_START>>>"
 DATA_CLOSE = "<<<UNTRUSTED_DATA_END>>>"
 
 # Hard cap on untrusted content per call (token budget + abuse control).
 MAX_CONTENT_LENGTH = 20_000
-
-
-class GuardedPromptError(Exception):
-    """Raised when structured model output fails schema validation."""
 
 
 def sanitize_content(text: str, *, max_length: int = MAX_CONTENT_LENGTH) -> str:

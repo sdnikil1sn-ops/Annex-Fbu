@@ -74,3 +74,202 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Me Api V1 Users Me Get
+  /api/v1/analysis:
+    post:
+      tags:
+      - analysis
+      summary: Submit
+      description: 'Submit content for claim analysis (text only at this phase).
+
+
+        Accepts anonymous submissions; anonymous analyses carry no owner and can
+
+        only be read back by their holder while unauthenticated context exists.
+
+        Returns 202 with the analysis so clients can poll for the report.'
+      operationId: submit_api_v1_analysis_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitAnalysisRequest'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Submit Api V1 Analysis Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - analysis
+      summary: List Analyses
+      description: List the caller's analyses, newest first (cursor-paginated).
+      operationId: list_analyses_api_v1_analysis_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cursor
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Analyses Api V1 Analysis Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/analysis/{analysis_id}:
+    get:
+      tags:
+      - analysis
+      summary: Get Analysis
+      description: Fetch one analysis with its report (owner only).
+      operationId: get_analysis_api_v1_analysis__analysis_id__get
+      parameters:
+      - name: analysis_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Analysis Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Analysis Api V1 Analysis  Analysis Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - analysis
+      summary: Delete Analysis
+      description: Delete an analysis (owner only).
+      operationId: delete_analysis_api_v1_analysis__analysis_id__delete
+      parameters:
+      - name: analysis_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Analysis Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Delete Analysis Api V1 Analysis  Analysis Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    AnalysisInputType:
+      type: string
+      enum:
+      - text
+      - url
+      - image
+      title: AnalysisInputType
+      description: The kind of content submitted for analysis.
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    SubmitAnalysisRequest:
+      properties:
+        input_type:
+          $ref: '#/components/schemas/AnalysisInputType'
+          default: text
+        text:
+          type: string
+          maxLength: 20000
+          minLength: 1
+          title: Text
+        locale:
+          type: string
+          maxLength: 10
+          minLength: 2
+          title: Locale
+          default: en
+      type: object
+      required:
+      - text
+      title: SubmitAnalysisRequest
+      description: Body for ``POST /analysis``.
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

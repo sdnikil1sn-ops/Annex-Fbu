@@ -3,7 +3,8 @@
 Wires the application core per ADR-0003: configuration, structured
 logging, request-ID tracing, the error envelope, CORS, the versioned
 router, and the infrastructure ports (database repositories, token
-verifier) bound to ``app.state`` for dependency injection.
+verifier, claim analyzer, media adapters) bound to ``app.state`` for
+dependency injection.
 """
 
 from fastapi import FastAPI
@@ -13,13 +14,19 @@ from app import __version__
 from app.api.errors import register_exception_handlers
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_router
+from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerifier
+from app.application.ports.media import ForensicsAdapter, OcrAdapter
+from app.application.services.analysis_service import AnalysisService
 from app.application.services.user_service import UserService
 from app.core.checks import DatabaseHealthCheck, DependencyCheck
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
+from app.infrastructure.ai.factory import build_claim_analyzer
 from app.infrastructure.auth.firebase_token_verifier import FirebaseTokenVerifier
+from app.infrastructure.media.factory import build_forensics_adapter, build_ocr_adapter
+from app.infrastructure.repositories.analysis_repository import PostgresAnalysisRepository
 from app.infrastructure.repositories.user_repository import PostgresUserRepository
 
 
@@ -28,6 +35,10 @@ def create_app(
     *,
     token_verifier: TokenVerifier | None = None,
     user_service: UserService | None = None,
+    claim_analyzer: ClaimAnalyzer | None = None,
+    ocr_adapter: OcrAdapter | None = None,
+    forensics_adapter: ForensicsAdapter | None = None,
+    analysis_service: AnalysisService | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application instance.
 
@@ -39,6 +50,14 @@ def create_app(
         user_service: Optional user service override (tests use mocks);
             defaults to the PostgreSQL-backed service when a database is
             configured.
+        claim_analyzer: Optional analyzer override (tests use mocks);
+            defaults to the provider selected from settings (ADR-0006).
+        ocr_adapter: Optional OCR override; defaults to Tesseract with a
+            mock fallback when the binary is missing.
+        forensics_adapter: Optional forensics override; defaults to OpenCV.
+        analysis_service: Optional analysis service override (tests use the
+            in-memory repository); defaults to the PostgreSQL-backed service
+            when a database is configured.
 
     Returns:
         A fully wired FastAPI application.
@@ -75,6 +94,21 @@ def create_app(
         user_service = UserService(PostgresUserRepository(settings.database_url))
     app.state.token_verifier = token_verifier
     app.state.user_service = user_service
+
+    # AI + media processing (Phase 6, ADR-0006): bind the configured claim
+    # analyzer and media adapters to the app so services and endpoints resolve
+    # them through DI instead of constructing providers ad hoc. Provider
+    # selection is configuration-driven; unconfigured providers fall back to
+    # the explicit mocks (local development / tests).
+    app.state.claim_analyzer = claim_analyzer or build_claim_analyzer(settings)
+    app.state.ocr_adapter = ocr_adapter or build_ocr_adapter(settings)
+    app.state.forensics_adapter = forensics_adapter or build_forensics_adapter()
+
+    # Analysis pipeline (Phase 4 domain + Phase 6 API): wire the service
+    # from settings unless overridden (tests inject the in-memory mock).
+    if analysis_service is None and settings.database_url:
+        analysis_service = AnalysisService(PostgresAnalysisRepository(settings.database_url))
+    app.state.analysis_service = analysis_service
 
     # add_middleware prepends: the LAST registration is the OUTERMOST layer.
     # RequestIdMiddleware is registered last so even CORS-preflight responses

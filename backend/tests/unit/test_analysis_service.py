@@ -5,12 +5,14 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from app.application.ports.ai import AnalysisProviderError
 from app.application.services.analysis_service import AnalysisService
 from app.domain.analysis import (
     AnalysisInputType,
     AnalysisStatus,
     InvalidStatusTransitionError,
 )
+from app.infrastructure.ai.mock_claim_analyzer import MockClaimAnalyzer
 from app.infrastructure.repositories.mock_analysis_repository import (
     MockAnalysisRepository,
 )
@@ -92,3 +94,48 @@ def test_list_with_cursor(service: AnalysisService) -> None:
 
     page = service.list_for_user(owner, limit=1, cursor=(second.created_at, second.analysis_id))
     assert [a.analysis_id for a in page] == [first.analysis_id]
+
+
+def test_complete_persists_report(service: AnalysisService) -> None:
+    """A report attached at completion is persisted with the row."""
+    analysis = service.submit(AnalysisInputType.TEXT)
+    report = {"summary": "s", "claims": [{"text": "c", "verifiability": 0.5}]}
+    completed = service.complete(service.mark_processing(analysis), report=report)
+    assert completed.report == report
+    assert service.get(analysis.analysis_id).report == report
+
+
+def test_analyze_text_completes_with_report(service: AnalysisService) -> None:
+    """The synchronous pipeline completes with a structured report."""
+    analyzer = MockClaimAnalyzer()
+    analysis = service.analyze_text("some text", analyzer=analyzer)
+    assert analysis.status is AnalysisStatus.COMPLETED
+    assert analysis.report == {
+        "summary": "mock summary",
+        "claims": [{"text": "mock claim", "verifiability": 0.5}],
+    }
+    assert analyzer.analyzed_texts == ["some text"]
+    assert service.get(analysis.analysis_id).status is AnalysisStatus.COMPLETED
+
+
+def test_analyze_text_fails_when_provider_errors(service: AnalysisService) -> None:
+    """A provider failure yields a FAILED analysis with a structured reason."""
+
+    class FailingAnalyzer:
+        def analyze(self, text: str):
+            raise AnalysisProviderError("provider down")
+
+    analysis = service.analyze_text("x", analyzer=FailingAnalyzer())  # type: ignore[arg-type]
+    assert analysis.status is AnalysisStatus.FAILED
+    assert analysis.failure_reason == "analysis.processing_failed"
+    assert analysis.report is None
+
+
+def test_analyze_text_attaches_owner_and_locale(service: AnalysisService) -> None:
+    """Owner and locale flow through the pipeline into the persisted row."""
+    owner = uuid4()
+    analysis = service.analyze_text(
+        "text", analyzer=MockClaimAnalyzer(), user_id=owner, locale="pt-BR"
+    )
+    assert analysis.user_id == owner
+    assert analysis.locale == "pt-BR"

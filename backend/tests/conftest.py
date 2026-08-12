@@ -4,9 +4,13 @@ from uuid import uuid4
 
 import pytest
 from app.application.ports.auth import VerifiedIdentity
+from app.application.services.analysis_service import AnalysisService
 from app.application.services.user_service import UserService
 from app.core.config import Settings
 from app.infrastructure.auth.mock_token_verifier import MockTokenVerifier
+from app.infrastructure.repositories.mock_analysis_repository import (
+    MockAnalysisRepository,
+)
 from app.infrastructure.repositories.mock_user_repository import MockUserRepository
 from app.main import create_app
 from fastapi.testclient import TestClient
@@ -48,11 +52,23 @@ def user_service() -> UserService:
 
 
 @pytest.fixture()
+def analysis_service() -> AnalysisService:
+    """An analysis service backed by an in-memory repository."""
+    return AnalysisService(MockAnalysisRepository())
+
+
+@pytest.fixture()
 def authed_client(
     settings: Settings,
     token_verifier: MockTokenVerifier,
     user_service: UserService,
+    analysis_service: AnalysisService,
 ) -> TestClient:
-    """A client with mock authentication fully wired."""
-    app = create_app(settings, token_verifier=token_verifier, user_service=user_service)
+    """A client with mock auth and analysis processing fully wired."""
+    app = create_app(
+        settings,
+        token_verifier=token_verifier,
+        user_service=user_service,
+        analysis_service=analysis_service,
+    )
     return TestClient(app, raise_server_exceptions=False)

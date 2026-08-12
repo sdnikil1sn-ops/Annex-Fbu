@@ -95,9 +95,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     ``GEMINI_API_KEY``/``GEMINI_MODEL``, ``OCR_LANGUAGES``) and pinned
     dependencies (``openai``, ``google-genai``, ``pytesseract``,
     ``opencv-python-headless``).
-  - 40 new tests covering adversarial prompt-injection payloads, analyzer
-    adapters against deterministic fakes, and media adapters against real
-    images (86 tests total, ~92% coverage).
+  - Composition-root factories wiring the configured provider into
+    ``app.state``: ``build_claim_analyzer`` (OpenAI → Gemini → explicit mock),
+    ``build_ocr_adapter`` (Tesseract with a logged mock fallback when the
+    binary is missing), and ``build_forensics_adapter`` (OpenCV);
+    ``create_app`` accepts override-injectable analyzers/adapters like the
+    auth ports (tests inject mocks).
+  - Analysis API (v1 contract): ``POST /analysis`` (202 + ``analysis_id``;
+    text input only at this phase), ``GET /analysis/{id}`` and
+    ``GET /analysis`` (owner-scoped, cursor-paginated), and
+    ``DELETE /analysis/{id}``. The pipeline runs inline through the bound
+    analyzer and persists the report — the interim synchronous path until
+    ADR-0008 workers land in Phase 7; anonymous submissions supported.
+  - ``report jsonb`` column on ``analyses`` (migration 20260812000001) so
+    reports are fetchable by ID; ``GuardedPromptError`` promoted to the
+    application boundary so services handle provider output failures without
+    infrastructure coupling.
+  - 71 new tests covering adversarial prompt-injection payloads, analyzer
+    adapters against deterministic fakes, media adapters against real images,
+    composition-root wiring, the analysis API, and the jsonb report
+    adaptation (117 tests total, ~94% coverage); the executable OpenAPI
+    contract is regenerated with the new paths (ADR-0002).
 
 ### Changed
 

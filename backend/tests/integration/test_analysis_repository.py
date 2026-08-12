@@ -7,6 +7,7 @@ migrations on every run (helpers.apply_migrations).
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
@@ -57,6 +58,19 @@ def test_update_status_persists(repository: AnalysisRepository) -> None:
     assert fetched is not None
     assert fetched.status is AnalysisStatus.COMPLETED
     assert fetched.completed_at is not None
+
+
+def test_report_round_trips(repository: AnalysisRepository) -> None:
+    """The report JSONB column survives a write + read cycle."""
+    analysis = repository.create(Analysis())
+    completed = analysis.transition_to(AnalysisStatus.COMPLETED)
+    repository.update_status(
+        replace(completed, report={"summary": "s", "claims": [{"text": "c"}]})
+    )
+
+    fetched = repository.get(analysis.analysis_id)
+    assert fetched is not None
+    assert fetched.report == {"summary": "s", "claims": [{"text": "c"}]}
 
 
 def test_list_by_user_orders_newest_first(repository: AnalysisRepository) -> None:

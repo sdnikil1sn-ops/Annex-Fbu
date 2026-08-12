@@ -7,8 +7,9 @@ mounted directly by the application factory (app.main), not here.
 
 from fastapi import APIRouter
 
-from app.api.v1 import meta, users
+from app.api.v1 import analysis, meta, users
 
 api_router = APIRouter()
 api_router.include_router(meta.router)
 api_router.include_router(users.router)
+api_router.include_router(analysis.router)

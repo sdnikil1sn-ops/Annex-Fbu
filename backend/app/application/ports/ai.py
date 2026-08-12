@@ -31,6 +31,15 @@ class AnalysisProviderError(Exception):
     """Raised when an AI provider cannot be reached or returns garbage."""
 
 
+class GuardedPromptError(Exception):
+    """Raised when structured model output fails guard validation.
+
+    Defined at the application boundary so services and the API layer can
+    handle provider output failures without depending on infrastructure
+    (ADR-0003). ``app.infrastructure.ai.prompt_guard`` re-exports it.
+    """
+
+
 class ClaimAnalyzer(Protocol):
     """Analyzes untrusted text and extracts claims with scores."""
 

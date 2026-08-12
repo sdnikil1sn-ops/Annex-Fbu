@@ -12,12 +12,25 @@ from uuid import UUID
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from app.application.ports.repositories import AnalysisRepository, Cursor
 from app.domain.analysis import Analysis, AnalysisInputType, AnalysisStatus
 
 # Columns shared by every query in this repository.
-_COLUMNS = "id, user_id, input_type, status, locale, failure_reason, created_at, completed_at"
+_COLUMNS = (
+    "id, user_id, input_type, status, locale, failure_reason, report, "
+    "created_at, completed_at"
+)
+
+
+def _report_param(report: dict[str, Any] | None) -> Jsonb | None:
+    """Adapt a report dict for a jsonb column (SQL NULL when absent).
+
+    psycopg does not adapt plain ``dict`` to ``jsonb`` automatically, so the
+    wrapper must be explicit (``psycopg.types.json.Jsonb``).
+    """
+    return Jsonb(report) if report is not None else None
 
 
 class PostgresAnalysisRepository(AnalysisRepository):
@@ -43,6 +56,7 @@ class PostgresAnalysisRepository(AnalysisRepository):
             status=AnalysisStatus(row["status"]),
             locale=row["locale"],
             failure_reason=row["failure_reason"],
+            report=row["report"],
             created_at=row["created_at"],
             completed_at=row["completed_at"],
         )
@@ -53,7 +67,7 @@ class PostgresAnalysisRepository(AnalysisRepository):
             conn.execute(
                 f"""
                 insert into public.analyses ({_COLUMNS})
-                values (%s, %s, %s, %s, %s, %s, %s, %s)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     analysis.analysis_id,
@@ -62,6 +76,7 @@ class PostgresAnalysisRepository(AnalysisRepository):
                     analysis.status.value,
                     analysis.locale,
                     analysis.failure_reason,
+                    _report_param(analysis.report),
                     analysis.created_at,
                     analysis.completed_at,
                 ),
@@ -115,12 +130,13 @@ class PostgresAnalysisRepository(AnalysisRepository):
             conn.execute(
                 """
                 update public.analyses
-                set status = %s, failure_reason = %s, completed_at = %s
+                set status = %s, failure_reason = %s, report = %s, completed_at = %s
                 where id = %s
                 """,
                 (
                     analysis.status.value,
                     analysis.failure_reason,
+                    _report_param(analysis.report),
                     analysis.completed_at,
                     analysis.analysis_id,
                 ),

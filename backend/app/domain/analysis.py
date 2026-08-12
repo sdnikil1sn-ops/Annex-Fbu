@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 from uuid import UUID, uuid4
 
 
@@ -62,6 +63,8 @@ class Analysis:
         status: Current state-machine state.
         locale: Analysis language code.
         failure_reason: Structured error code when status is FAILED.
+        report: Structured analysis output (claims + summary) attached when
+            the analysis completes; None until then.
         created_at: Submission timestamp (UTC).
         completed_at: Terminal-state timestamp (UTC), None until terminal.
     """
@@ -72,6 +75,7 @@ class Analysis:
     status: AnalysisStatus = AnalysisStatus.PENDING
     locale: str = "en"
     failure_reason: str | None = None
+    report: dict[str, Any] | None = None
     created_at: datetime = field(default_factory=_utcnow)
     completed_at: datetime | None = None
 
@@ -110,6 +114,7 @@ class Analysis:
             status=new_status,
             locale=self.locale,
             failure_reason=failure_reason if new_status is AnalysisStatus.FAILED else None,
+            report=self.report,
             created_at=self.created_at,
             completed_at=completed_at,
         )
