@@ -12,7 +12,7 @@
 | Authentication | Firebase ID token in `Authorization: Bearer <token>`; verified server-side (ADR-0005) |
 | Anonymous access | Public endpoints are explicitly listed; everything else requires a verified token |
 | Response envelope | `{ "data": ..., "meta": {...} }` for success; `{ "error": { "code", "message", "request_id" } }` for failure |
-| Error codes | Machine-readable codes (`auth.expired_token`, `validation.invalid_input`, `analysis.not_found`, `rate.exceeded`, …) |
+| Error codes | Machine-readable codes (`auth.expired_token`, `validation.invalid_input`, `validation.invalid_url`, `validation.invalid_image`, `analysis.not_found`, `analysis.fetch_failed`, `analysis.media_failed`, `rate.exceeded`, …) |
 | Pagination | Cursor-based: `?cursor=...&limit=50`; `meta.next_cursor` returned |
 | Idempotency | State-changing analysis endpoints accept `Idempotency-Key` headers |
 | Tracing | Every response includes `X-Request-ID`; log lines carry it |
@@ -91,6 +91,23 @@
 |---|---|---|---|---|
 | GET | `/api/v1/i18n/locales` | none | 120/min | Enabled locales + fallback chain |
 | GET | `/api/v1/i18n/bundles/{locale}?version=` | none | 120/min | Versioned translation bundle (ADR-0007) |
+
+## Submit contract for `POST /analysis`
+
+Exactly one content field must be present, matching `input_type`:
+
+| `input_type` | Field | Notes |
+|---|---|---|
+| `text` | `text` (≤ 20 000 chars) | Analyzed directly |
+| `url` | `url` (≤ 2 048 chars) | Fetched server-side through the SSRF guard; report carries `media.input` (`url`, `final_url`, `status`) |
+| `image` | `image` (base64 or `data:` URL) | Decoded with a size cap; MIME is sniffed from the bytes; OCR + forensics run; report carries `media.ocr` + `media.forensics` |
+
+URLs must be plain http(s) without embedded credentials (shape-checked at
+the boundary; DNS/IP validation happens in the fetcher). Images are capped
+at `MEDIA_IMAGE_MAX_BYTES` (default 4 MB decoded). A refused URL fails the
+analysis with `analysis.fetch_failed`; an undecodable image fails with
+`analysis.media_failed` — both are FAILED states clients can surface, never
+5xx responses.
 
 ## Status model for analyses
 

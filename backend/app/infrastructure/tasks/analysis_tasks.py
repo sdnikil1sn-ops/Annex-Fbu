@@ -27,16 +27,21 @@ from app.application.ports.ai import (
     ClaimAnalyzer,
     GuardedPromptError,
 )
+from app.application.ports.media import MediaProcessingError, UrlFetchError
 from app.application.ports.repositories import AnalysisRepository
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.media_pipeline import MediaPipeline
 from app.core.config import Settings, get_settings
 from app.core.exceptions import ConfigurationError
 from app.domain.analysis import (
     FAILURE_BLOCKED,
+    FAILURE_FETCH,
+    FAILURE_MEDIA,
     FAILURE_PROCESSING,
     AnalysisStatus,
 )
 from app.infrastructure.ai.factory import build_claim_analyzer
+from app.infrastructure.media.factory import build_media_pipeline
 from app.infrastructure.repositories.analysis_repository import PostgresAnalysisRepository
 from app.infrastructure.tasks.celery_app import celery_app
 
@@ -48,15 +53,16 @@ def _worker_service(settings: Settings) -> AnalysisService:
 
     Workers are separate processes without ``app.state``, so dependencies
     are constructed here from settings: the PostgreSQL repository (the
-    service role bypasses RLS for worker writes) and the configured claim
-    analyzer (ADR-0006 provider selection).
+    service role bypasses RLS for worker writes), the configured claim
+    analyzer (ADR-0006 provider selection), and the media pipeline
+    (Phase 13, cached per process like the analyzer).
     """
     if not settings.database_url:
         raise ConfigurationError(
             "DATABASE_URL is required to run the analysis worker"
         )
     repository: AnalysisRepository = PostgresAnalysisRepository(settings.database_url)
-    return AnalysisService(repository)
+    return AnalysisService(repository, media_pipeline=_get_media_pipeline())
 
 
 @celery_app.task(  # type: ignore[untyped-decorator]
@@ -100,7 +106,8 @@ def run_analysis(self: Task, analysis_id: str) -> dict[str, Any]:
 
     processing = service.mark_processing(analysis)
     try:
-        result = _get_analyzer().analyze(analysis.content or "")
+        text, media = service.extract_content(processing)
+        result = _get_analyzer().analyze(text)
     except GuardedPromptError:
         # Hostile input is unrecoverable — retrying cannot help. Dead-letter
         # immediately with a distinct reason.
@@ -111,10 +118,25 @@ def run_analysis(self: Task, analysis_id: str) -> dict[str, Any]:
             "status": failed.status.value,
             "failure_reason": failed.failure_reason,
         }
-    except AnalysisProviderError as exc:
+    except MediaProcessingError:
+        # An image that cannot be decoded/processed will never succeed on
+        # retry — dead-letter with the media reason.
+        logger.warning("analysis %s failed media processing", analysis_id)
+        failed = service.fail(processing, FAILURE_MEDIA)
+        return {
+            "analysis_id": analysis_id,
+            "status": failed.status.value,
+            "failure_reason": failed.failure_reason,
+        }
+    except (AnalysisProviderError, UrlFetchError) as exc:
+        # Fetch errors are retried alongside provider outages because a
+        # network blip is indistinguishable from a refusal at this layer;
+        # permanent refusals (SSRF guard, size cap) simply exhaust the
+        # retries and dead-letter below — wasteful but harmless.
         if self.request.retries < self.max_retries:
-            # Transient provider outage: requeue to PENDING, then retry with
-            # exponential backoff so the retried run sees a PENDING row.
+            # Transient provider/fetch outage: requeue to PENDING, then
+            # retry with exponential backoff so the retried run sees a
+            # PENDING row.
             service.requeue(processing)
             raise self.retry(exc=exc) from exc
         logger.warning(
@@ -122,14 +144,15 @@ def run_analysis(self: Task, analysis_id: str) -> dict[str, Any]:
             analysis_id,
             self.max_retries,
         )
-        failed = service.fail(processing, FAILURE_PROCESSING)
+        reason = FAILURE_FETCH if isinstance(exc, UrlFetchError) else FAILURE_PROCESSING
+        failed = service.fail(processing, reason)
         return {
             "analysis_id": analysis_id,
             "status": failed.status.value,
             "failure_reason": failed.failure_reason,
         }
 
-    completed = service.complete_with_report(processing, result)
+    completed = service.complete_with_report(processing, result, media=media)
     logger.info("analysis %s completed with %s claims", analysis_id, len(result.claims))
     return {"analysis_id": analysis_id, "status": completed.status.value}
 
@@ -147,3 +170,19 @@ def _get_analyzer() -> ClaimAnalyzer:
     if _analyzer_instance is None:
         _analyzer_instance = build_claim_analyzer(get_settings())
     return _analyzer_instance
+
+
+_media_pipeline_instance: MediaPipeline | None = None
+
+
+def _get_media_pipeline() -> MediaPipeline:
+    """Build (and cache) the media pipeline from settings.
+
+    Cached like the analyzer so the adapter construction — and the
+    Tesseract fallback probe with its warning — runs once per worker
+    process instead of once per task.
+    """
+    global _media_pipeline_instance
+    if _media_pipeline_instance is None:
+        _media_pipeline_instance = build_media_pipeline(get_settings())
+    return _media_pipeline_instance

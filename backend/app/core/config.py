@@ -70,6 +70,14 @@ class Settings(BaseSettings):
     # OCR (Phase 6): Tesseract language codes.
     ocr_languages: str = "eng"
 
+    # Media analysis (Phase 13): URL fetching (SSRF-guarded) and image
+    # submission limits. Fetch timeouts/limits keep the worker from being
+    # dragged into slow or unbounded downloads; image submissions are
+    # capped in decoded byte size at the API boundary.
+    media_fetch_timeout: float = 10.0
+    media_fetch_max_bytes: int = 2_000_000
+    media_image_max_bytes: int = 4_000_000
+
     # Async pipelines (Phase 7, ADR-0008): Redis URL used by the rate
     # limiter and readiness probe; Celery broker/result endpoints for the
     # analysis worker. Broker/backend fall back to the Redis URL so a

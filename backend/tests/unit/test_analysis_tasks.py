@@ -2,22 +2,68 @@
 
 The task body is executed eagerly via ``.run()`` with the worker's
 dependency builders monkeypatched to mocks, so no broker is required.
+Phase 13 media scenarios (URL fetch, image OCR/forensics, and their
+failure paths) are covered with a media-pipeline-wired service.
 """
 
 from __future__ import annotations
 
+import base64
 from uuid import uuid4
 
 import pytest
 from app.application.ports.ai import AnalysisProviderError, GuardedPromptError
+from app.application.ports.media import (
+    FetchedPage,
+    MediaProcessingError,
+    UrlFetchError,
+)
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.media_pipeline import MediaPipeline
 from app.domain.analysis import AnalysisInputType, AnalysisStatus
 from app.infrastructure.ai.mock_claim_analyzer import MockClaimAnalyzer
+from app.infrastructure.media.mock_media_adapters import (
+    MockForensicsAdapter,
+    MockOcrAdapter,
+)
 from app.infrastructure.repositories.mock_analysis_repository import (
     MockAnalysisRepository,
 )
 from app.infrastructure.tasks import analysis_tasks as tasks
 from celery.exceptions import Retry
+
+
+def _media_service(
+    *,
+    fetcher_error: Exception | None = None,
+    ocr: MockOcrAdapter | None = None,
+) -> AnalysisService:
+    """An analysis service wired with the media pipeline of deterministic fakes."""
+
+    class FakeUrlFetcher:
+        def fetch(
+            self,
+            url: str,
+            *,
+            timeout: float = 10.0,
+            max_bytes: int = 2_000_000,
+        ) -> FetchedPage:
+            if fetcher_error is not None:
+                raise fetcher_error
+            return FetchedPage(
+                final_url="https://example.com/final",
+                status=200,
+                text="page text",
+            )
+
+    return AnalysisService(
+        MockAnalysisRepository(),
+        media_pipeline=MediaPipeline(
+            url_fetcher=FakeUrlFetcher(),
+            ocr_adapter=ocr or MockOcrAdapter(),
+            forensics_adapter=MockForensicsAdapter(),
+        ),
+    )
 
 
 def _install(monkeypatch: pytest.MonkeyPatch, *, analyzer=None):
@@ -152,3 +198,101 @@ def test_run_analysis_retries_transient_failure_and_requeues(
     assert fetched is not None
     assert fetched.status is AnalysisStatus.PENDING
     assert fetched.content == "x"
+
+
+# ----------------------------------------------------------------------
+# Phase 13 media scenarios
+# ----------------------------------------------------------------------
+
+
+def test_run_analysis_extracts_url_and_reports_media(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A URL analysis runs the media pipeline and reports its context."""
+    service = _media_service()
+    analyzer = MockClaimAnalyzer()
+    monkeypatch.setattr(tasks, "_worker_service", lambda settings: service)
+    monkeypatch.setattr(tasks, "_get_analyzer", lambda: analyzer)
+    created = service.submit(
+        AnalysisInputType.URL, content="https://example.com/article"
+    )
+
+    result = tasks.run_analysis.run(str(created.analysis_id))
+
+    assert result["status"] == "completed"
+    fetched = service.get(created.analysis_id)
+    assert fetched is not None
+    media = fetched.report["media"]
+    assert media["input"]["type"] == "url"
+    assert media["input"]["final_url"] == "https://example.com/final"
+    # The analyzer consumed the extracted page text, not the raw URL.
+    assert analyzer.analyzed_texts == ["page text"]
+
+
+def test_run_analysis_extracts_image_and_reports_media(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An image analysis runs OCR + forensics and reports their output."""
+    service = _media_service()
+    analyzer = MockClaimAnalyzer()
+    monkeypatch.setattr(tasks, "_worker_service", lambda settings: service)
+    monkeypatch.setattr(tasks, "_get_analyzer", lambda: analyzer)
+    created = service.submit(
+        AnalysisInputType.IMAGE,
+        content=base64.b64encode(b"\x89PNG\r\n\x1a\nfake").decode(),
+    )
+
+    result = tasks.run_analysis.run(str(created.analysis_id))
+
+    assert result["status"] == "completed"
+    fetched = service.get(created.analysis_id)
+    assert fetched is not None
+    media = fetched.report["media"]
+    assert media["input"]["type"] == "image"
+    assert media["ocr"]["text"] == "mock ocr text"
+    assert media["forensics"]["risk_score"] == 0.0
+    assert analyzer.analyzed_texts == ["mock ocr text"]
+
+
+def test_run_analysis_deadletters_unfetchable_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An SSRF-refused URL dead-letters with the fetch reason, no retry."""
+    service = _media_service(fetcher_error=UrlFetchError("refused by the SSRF guard"))
+    monkeypatch.setattr(tasks, "_worker_service", lambda settings: service)
+    monkeypatch.setattr(tasks, "_get_analyzer", lambda: MockClaimAnalyzer())
+    monkeypatch.setattr(tasks.run_analysis, "max_retries", 0)
+    created = service.submit(AnalysisInputType.URL, content="http://192.168.1.1/")
+
+    result = tasks.run_analysis.run(str(created.analysis_id))
+
+    assert result["status"] == "failed"
+    assert result["failure_reason"] == "analysis.fetch_failed"
+    fetched = service.get(created.analysis_id)
+    assert fetched is not None
+    assert fetched.status is AnalysisStatus.FAILED
+    assert fetched.failure_reason == "analysis.fetch_failed"
+
+
+def test_run_analysis_deadletters_media_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An undecodable image dead-letters with the media reason."""
+
+    class BrokenOcr:
+        def extract_text(self, image_bytes: bytes):
+            raise MediaProcessingError("cannot decode image")
+
+    service = _media_service(ocr=BrokenOcr())  # type: ignore[arg-type]
+    monkeypatch.setattr(tasks, "_worker_service", lambda settings: service)
+    monkeypatch.setattr(tasks, "_get_analyzer", lambda: MockClaimAnalyzer())
+    created = service.submit(
+        AnalysisInputType.IMAGE,
+        content=base64.b64encode(b"fake-image").decode(),
+    )
+
+    result = tasks.run_analysis.run(str(created.analysis_id))
+
+    assert result["status"] == "failed"
+    assert result["failure_reason"] == "analysis.media_failed"
+    assert service.get(created.analysis_id).failure_reason == "analysis.media_failed"

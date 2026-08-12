@@ -77,15 +77,129 @@ class ClaimItem {
       {'text': text, 'verifiability': verifiability};
 }
 
+/// Optional media-processing context merged into reports for URL and image
+/// inputs (Phase 13).
+///
+/// URL inputs carry fetch metadata (`input.type == 'url'` with the final
+/// URL and HTTP status); image inputs carry the OCR-extracted text and the
+/// forensics tamper signals (`input.type == 'image'`). Text inputs have no
+/// media context (`report.media` is null).
+class MediaContext {
+  const MediaContext({
+    required this.inputType,
+    this.url,
+    this.finalUrl,
+    this.httpStatus,
+    this.mime,
+    this.sizeBytes,
+    this.ocrText,
+    this.ocrConfidence,
+    this.riskScore,
+    this.signals,
+  });
+
+  /// Backend `input.type`: `'url'` or `'image'`.
+  final String inputType;
+
+  /// The submitted URL (url inputs).
+  final String? url;
+
+  /// The final URL after redirects (url inputs).
+  final String? finalUrl;
+
+  /// HTTP status of the final response (url inputs).
+  final int? httpStatus;
+
+  /// Sniffed image MIME type (image inputs).
+  final String? mime;
+
+  /// Decoded image byte size (image inputs).
+  final int? sizeBytes;
+
+  /// OCR-extracted text (image inputs).
+  final String? ocrText;
+
+  /// OCR confidence in `[0, 1]` (image inputs).
+  final double? ocrConfidence;
+
+  /// Tamper risk score in `[0, 1]` (image inputs).
+  final double? riskScore;
+
+  /// Additional forensics signals keyed by name (image inputs).
+  final Map<String, dynamic>? signals;
+
+  factory MediaContext.fromJson(Map<String, dynamic> json) {
+    final input = json['input'];
+    if (input is! Map) {
+      throw const FormatException('Media context requires an input object');
+    }
+    final inputMap = Map<String, dynamic>.from(input);
+    final inputType = inputMap['type'];
+    if (inputType is! String) {
+      throw const FormatException('Media context requires an input type');
+    }
+    final ocr = json['ocr'];
+    final forensics = json['forensics'];
+    return MediaContext(
+      inputType: inputType,
+      url: inputMap['url'] as String?,
+      finalUrl: inputMap['final_url'] as String?,
+      httpStatus: (inputMap['status'] as num?)?.toInt(),
+      mime: inputMap['mime'] as String?,
+      sizeBytes: (inputMap['size_bytes'] as num?)?.toInt(),
+      ocrText: (ocr is Map) ? ocr['text'] as String? : null,
+      ocrConfidence:
+          (ocr is Map) ? (ocr['confidence'] as num?)?.toDouble() : null,
+      riskScore: (forensics is Map)
+          ? (forensics['risk_score'] as num?)?.toDouble()
+          : null,
+      signals: (forensics is Map && forensics['signals'] is Map)
+          ? Map<String, dynamic>.from(forensics['signals'] as Map)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final input = <String, dynamic>{'type': inputType};
+    if (url != null) input['url'] = url;
+    if (finalUrl != null) input['final_url'] = finalUrl;
+    if (httpStatus != null) input['status'] = httpStatus;
+    if (mime != null) input['mime'] = mime;
+    if (sizeBytes != null) input['size_bytes'] = sizeBytes;
+
+    final result = <String, dynamic>{'input': input};
+    if (ocrText != null || ocrConfidence != null) {
+      result['ocr'] = {
+        if (ocrText != null) 'text': ocrText,
+        if (ocrConfidence != null) 'confidence': ocrConfidence,
+      };
+    }
+    if (riskScore != null || signals != null) {
+      result['forensics'] = {
+        if (riskScore != null) 'risk_score': riskScore,
+        if (signals != null) 'signals': signals,
+      };
+    }
+    return result;
+  }
+}
+
 /// The structured output of a completed analysis.
 class AnalysisReport {
-  const AnalysisReport({required this.summary, required this.claims});
+  const AnalysisReport({
+    required this.summary,
+    required this.claims,
+    this.media,
+  });
 
   /// Short, neutral summary of the analyzed content.
   final String summary;
 
   /// The extracted claims, in order.
   final List<ClaimItem> claims;
+
+  /// Media-processing context for URL/image inputs; null for text inputs.
+  final MediaContext? media;
 
   /// Overall credibility score as the mean claim verifiability
   /// (`0..1`), or `0` when no claims were extracted.
@@ -105,18 +219,23 @@ class AnalysisReport {
     if (claims is! List) {
       throw const FormatException('Report requires a claims list');
     }
+    final media = json['media'];
     return AnalysisReport(
       summary: summary,
       claims: claims
           .map((item) =>
               ClaimItem.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList(),
+      media: media == null
+          ? null
+          : MediaContext.fromJson(Map<String, dynamic>.from(media as Map)),
     );
   }
 
   Map<String, dynamic> toJson() => {
         'summary': summary,
         'claims': claims.map((claim) => claim.toJson()).toList(),
+        if (media != null) 'media': media!.toJson(),
       };
 }
 

@@ -13,9 +13,14 @@ from app.application.ports.ai import (
     ClaimAnalyzer,
     GuardedPromptError,
 )
+from app.application.ports.media import MediaProcessingError, UrlFetchError
 from app.application.ports.repositories import AnalysisRepository, Cursor
 from app.application.ports.tasks import AnalysisTaskDispatcher
+from app.application.services.media_pipeline import MediaPipeline
+from app.core.exceptions import ConfigurationError
 from app.domain.analysis import (
+    FAILURE_FETCH,
+    FAILURE_MEDIA,
     FAILURE_PROCESSING,
     Analysis,
     AnalysisInputType,
@@ -52,9 +57,11 @@ class AnalysisService:
         repository: AnalysisRepository,
         *,
         task_dispatcher: AnalysisTaskDispatcher | None = None,
+        media_pipeline: MediaPipeline | None = None,
     ) -> None:
         self._repository = repository
         self._task_dispatcher = task_dispatcher
+        self._media_pipeline = media_pipeline
 
     def submit(
         self,
@@ -115,10 +122,24 @@ class AnalysisService:
         return self._repository.update_status(updated)
 
     def complete_with_report(
-        self, analysis: Analysis, result: ClaimAnalysis
+        self,
+        analysis: Analysis,
+        result: ClaimAnalysis,
+        *,
+        media: dict[str, Any] | None = None,
     ) -> Analysis:
-        """Complete an analysis with the report for an analyzer result."""
-        return self.complete(analysis, report=_to_report(result))
+        """Complete an analysis with the report for an analyzer result.
+
+        Args:
+            analysis: The processing analysis to complete.
+            result: The claim-analysis output.
+            media: Optional media context (Phase 13) merged into the report
+                — URL fetch metadata or OCR + forensics signals.
+        """
+        report = _to_report(result)
+        if media is not None:
+            report["media"] = media
+        return self.complete(analysis, report=report)
 
     def fail(self, analysis: Analysis, reason: str) -> Analysis:
         """Move an analysis into FAILED with a structured reason."""
@@ -146,10 +167,7 @@ class AnalysisService:
     ) -> Analysis:
         """Submit text for claim analysis and either enqueue or run it.
 
-        When the service is bound to a task dispatcher (Phase 7, ADR-0008)
-        the submission is enqueued and returned in PENDING state — the
-        worker completes it and clients poll. Without a dispatcher the
-        pipeline runs inline (tests and broker-less deployments).
+        Convenience wrapper over :meth:`analyze` for the text path.
 
         Args:
             text: The untrusted content to analyze.
@@ -163,24 +181,111 @@ class AnalysisService:
             analysis with its report, or a FAILED analysis when the provider
             cannot produce valid output.
         """
-        analysis = self.submit(input_type, user_id=user_id, locale=locale, content=text)
+        return self.analyze(
+            input_type,
+            content=text,
+            analyzer=analyzer,
+            user_id=user_id,
+            locale=locale,
+        )
+
+    def analyze(
+        self,
+        input_type: AnalysisInputType,
+        *,
+        content: str,
+        analyzer: ClaimAnalyzer,
+        user_id: UUID | None = None,
+        locale: str = "en",
+    ) -> Analysis:
+        """Submit any content type for claim analysis and enqueue or run it.
+
+        When the service is bound to a task dispatcher (Phase 7, ADR-0008)
+        the submission is enqueued and returned in PENDING state — the
+        worker completes it and clients poll. Without a dispatcher the
+        pipeline runs inline (tests and broker-less deployments). For URL
+        and image inputs the media pipeline (Phase 13) extracts the text
+        to analyze (SSRF-guarded fetch / OCR + forensics).
+
+        Args:
+            input_type: The kind of content submitted (text, url, image).
+            content: The untrusted content: raw text, a URL string, or
+                base64-encoded image bytes.
+            analyzer: The configured claim analyzer (provider or mock).
+            user_id: Owner; None for anonymous requests.
+            locale: Analysis language code.
+
+        Returns:
+            The PENDING analysis when enqueued, otherwise the completed
+            analysis with its report, or a FAILED analysis when the pipeline
+            or provider cannot produce valid output.
+        """
+        analysis = self.submit(
+            input_type, user_id=user_id, locale=locale, content=content
+        )
         if self._task_dispatcher is not None:
             self._task_dispatcher.dispatch(analysis.analysis_id)
             return analysis
         return self._run_pipeline(analysis, analyzer)
 
+    def extract_content(self, analysis: Analysis) -> tuple[str, dict[str, Any] | None]:
+        """Extract the analyzable text (and media context) for an analysis.
+
+        Text inputs pass through untouched; URL and image inputs delegate to
+        the bound media pipeline. Shared by the inline path and the Celery
+        worker so both behave identically (ADR-0008).
+
+        Args:
+            analysis: A non-terminal analysis with persisted content.
+
+        Returns:
+            The text for the claim analyzer plus the media context to merge
+            into the report (None for text inputs).
+
+        Raises:
+            UrlFetchError: The URL could not be fetched safely.
+            MediaProcessingError: The image could not be processed.
+            ConfigurationError: A media input was submitted without a
+                configured media pipeline.
+        """
+        if analysis.input_type is AnalysisInputType.TEXT:
+            return analysis.content or "", None
+        if self._media_pipeline is None:
+            raise ConfigurationError("media pipeline is not configured")
+        return self._media_pipeline.extract(analysis)
+
     def _run_pipeline(self, analysis: Analysis, analyzer: ClaimAnalyzer) -> Analysis:
         """Run the inline pipeline (interim synchronous path, pre-worker)."""
         processing = self.mark_processing(analysis)
         try:
-            result = analyzer.analyze(analysis.content or "")
+            text, media = self.extract_content(processing)
+            result = analyzer.analyze(text)
+        except ConfigurationError:
+            # A media input hit a service without a configured pipeline
+            # (misconfigured deployment). Never 5xx — fail with the generic
+            # processing reason so the contract holds for every submission.
+            logger.error(
+                "media pipeline missing while processing analysis %s",
+                analysis.analysis_id,
+            )
+            return self.fail(processing, reason=FAILURE_PROCESSING)
         except (AnalysisProviderError, GuardedPromptError):
             logger.warning(
                 "claim analysis failed for analysis %s (provider error)",
                 analysis.analysis_id,
             )
             return self.fail(processing, reason=FAILURE_PROCESSING)
-        return self.complete_with_report(processing, result)
+        except UrlFetchError:
+            logger.warning(
+                "url fetch failed for analysis %s", analysis.analysis_id
+            )
+            return self.fail(processing, reason=FAILURE_FETCH)
+        except MediaProcessingError:
+            logger.warning(
+                "media processing failed for analysis %s", analysis.analysis_id
+            )
+            return self.fail(processing, reason=FAILURE_MEDIA)
+        return self.complete_with_report(processing, result, media=media)
 
     def delete(self, analysis_id: UUID) -> bool:
         """Delete an analysis; returns True if a row was removed."""

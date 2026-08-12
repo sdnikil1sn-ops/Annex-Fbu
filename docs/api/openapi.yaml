@@ -79,7 +79,7 @@ paths:
       tags:
       - analysis
       summary: Submit
-      description: 'Submit content for claim analysis (text only at this phase).
+      description: 'Submit text, a URL, or an image for claim analysis.
 
 
         Accepts anonymous submissions; anonymous analyses carry no owner and can
@@ -291,10 +291,23 @@ components:
           $ref: '#/components/schemas/AnalysisInputType'
           default: text
         text:
-          type: string
-          maxLength: 20000
-          minLength: 1
+          anyOf:
+          - type: string
+            maxLength: 20000
+            minLength: 1
+          - type: 'null'
           title: Text
+        url:
+          anyOf:
+          - type: string
+            maxLength: 2048
+          - type: 'null'
+          title: Url
+        image:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Image
         locale:
           type: string
           maxLength: 10
@@ -302,10 +315,13 @@ components:
           title: Locale
           default: en
       type: object
-      required:
-      - text
       title: SubmitAnalysisRequest
-      description: Body for ``POST /analysis``.
+      description: "Body for ``POST /analysis``.\n\nExactly one content field must\
+        \ be present, matching ``input_type``:\n\n- ``text`` for text input,\n- ``url``\
+        \ for URL input (fetched server-side, SSRF-guarded),\n- ``image`` for image\
+        \ input — base64-encoded bytes or a ``data:`` URL;\n  validated at the API\
+        \ boundary with a size cap, then OCR + forensics\n  (the MIME type is sniffed\
+        \ from the bytes by the pipeline)."
     ValidationError:
       properties:
         loc:

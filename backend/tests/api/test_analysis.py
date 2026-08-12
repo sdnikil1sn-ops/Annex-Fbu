@@ -1,16 +1,66 @@
 """API tests for the v1 analysis endpoints."""
 
+import base64
 from uuid import UUID, uuid4
 
 from app.application.ports.ai import AnalysisProviderError
+from app.application.ports.media import (
+    FetchedPage,
+    MediaProcessingError,
+    UrlFetchError,
+)
 from app.application.services.analysis_service import AnalysisService
+from app.application.services.media_pipeline import MediaPipeline
 from app.core.config import Settings
 from app.domain.analysis import AnalysisStatus
+from app.infrastructure.media.mock_media_adapters import (
+    MockForensicsAdapter,
+    MockOcrAdapter,
+)
 from app.infrastructure.repositories.mock_analysis_repository import (
     MockAnalysisRepository,
 )
 from app.main import create_app
 from fastapi.testclient import TestClient
+
+
+class FakeUrlFetcher:
+    """Deterministic fetcher for the media-wired test service."""
+
+    def __init__(
+        self,
+        page: FetchedPage | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self.page = page or FetchedPage(
+            final_url="https://example.com/final",
+            status=200,
+            text="page text",
+        )
+        self.error = error
+
+    def fetch(
+        self,
+        url: str,
+        *,
+        timeout: float = 10.0,
+        max_bytes: int = 2_000_000,
+    ) -> FetchedPage:
+        if self.error is not None:
+            raise self.error
+        return self.page
+
+
+def _media_service(*, fetcher_error: Exception | None = None) -> AnalysisService:
+    """An analysis service wired with a media pipeline of deterministic fakes."""
+    return AnalysisService(
+        MockAnalysisRepository(),
+        media_pipeline=MediaPipeline(
+            url_fetcher=FakeUrlFetcher(error=fetcher_error),
+            ocr_adapter=MockOcrAdapter(),
+            forensics_adapter=MockForensicsAdapter(),
+        ),
+    )
 
 
 def _headers() -> dict[str, str]:
@@ -46,15 +96,181 @@ def test_submit_anonymous_allowed(authed_client: TestClient, analysis_service) -
     assert fetched.status.value == "completed"
 
 
-def test_submit_rejects_unsupported_input(authed_client: TestClient) -> None:
-    """URL/image input is rejected clearly until those pipelines land."""
+def test_submit_image_requires_image_payload(authed_client: TestClient) -> None:
+    """An image submission without the image payload is a validation error."""
     response = authed_client.post(
         "/api/v1/analysis", json={"input_type": "image", "text": "x"}, headers=_headers()
     )
     assert response.status_code == 400
-    error = response.json()["error"]
-    assert error["code"] == "analysis.unsupported_input"
-    assert error["details"]["supported"] == ["text"]
+    assert response.json()["error"]["code"] == "validation.invalid_image"
+
+
+def test_submit_url_completes_with_media_context(
+    settings: Settings, token_verifier, user_service
+) -> None:
+    """A URL submission is fetched and the report carries the media context."""
+    service = _media_service()
+    app = create_app(
+        settings,
+        token_verifier=token_verifier,
+        user_service=user_service,
+        analysis_service=service,
+    )
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.post(
+            "/api/v1/analysis",
+            json={"input_type": "url", "url": "https://example.com/article"},
+            headers=_headers(),
+        )
+
+    assert response.status_code == 202
+    data = response.json()["data"]
+    assert data["status"] == "completed"
+    assert data["input_type"] == "url"
+    media = data["report"]["media"]
+    assert media["input"]["type"] == "url"
+    assert media["input"]["url"] == "https://example.com/article"
+    assert media["input"]["final_url"] == "https://example.com/final"
+    assert media["input"]["status"] == 200
+    assert data["report"]["summary"] == "mock summary"
+
+
+def test_submit_image_completes_with_ocr_and_forensics(
+    settings: Settings, token_verifier, user_service
+) -> None:
+    """An image submission runs OCR + forensics and reports their output."""
+    service = _media_service()
+    app = create_app(
+        settings,
+        token_verifier=token_verifier,
+        user_service=user_service,
+        analysis_service=service,
+    )
+    image = base64.b64encode(b"\x89PNG\r\n\x1a\nfake").decode()
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.post(
+            "/api/v1/analysis",
+            json={"input_type": "image", "image": image},
+            headers=_headers(),
+        )
+
+    assert response.status_code == 202
+    data = response.json()["data"]
+    assert data["status"] == "completed"
+    media = data["report"]["media"]
+    assert media["input"]["type"] == "image"
+    assert media["input"]["mime"] == "image/png"
+    assert media["ocr"]["text"] == "mock ocr text"
+    assert media["forensics"]["risk_score"] == 0.0
+
+
+def test_submit_rejects_malformed_image(authed_client: TestClient) -> None:
+    """Base64 garbage is rejected at the API boundary with a clear error."""
+    response = authed_client.post(
+        "/api/v1/analysis",
+        json={"input_type": "image", "image": "!!!not-base64!!!"},
+        headers=_headers(),
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation.invalid_image"
+
+
+def test_submit_rejects_oversized_image(
+    settings: Settings, token_verifier, user_service
+) -> None:
+    """Images above the configured byte cap are rejected with a clear error."""
+    capped_settings = Settings(
+        _env_file=None, app_env="test", media_image_max_bytes=10
+    )
+    service = _media_service()
+    app = create_app(
+        capped_settings,
+        token_verifier=token_verifier,
+        user_service=user_service,
+        analysis_service=service,
+    )
+    image = base64.b64encode(b"x" * 64).decode()
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.post(
+            "/api/v1/analysis",
+            json={"input_type": "image", "image": image},
+            headers=_headers(),
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation.invalid_image"
+
+
+def test_submit_rejects_non_http_url(authed_client: TestClient) -> None:
+    """Non-http(s) URLs are refused at the API boundary."""
+    response = authed_client.post(
+        "/api/v1/analysis",
+        json={"input_type": "url", "url": "ftp://example.com/file"},
+        headers=_headers(),
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation.invalid_url"
+
+
+def test_submit_unfetchable_url_fails_cleanly(
+    settings: Settings, token_verifier, user_service
+) -> None:
+    """An SSRF-refused URL surfaces as a FAILED analysis, not a 500."""
+    service = _media_service(fetcher_error=UrlFetchError("refused by the SSRF guard"))
+    app = create_app(
+        settings,
+        token_verifier=token_verifier,
+        user_service=user_service,
+        analysis_service=service,
+    )
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.post(
+            "/api/v1/analysis",
+            json={"input_type": "url", "url": "http://192.168.1.1/"},
+            headers=_headers(),
+        )
+
+    assert response.status_code == 202
+    data = response.json()["data"]
+    assert data["status"] == "failed"
+    assert data["failure_reason"] == "analysis.fetch_failed"
+
+
+def test_submit_undecodable_image_fails_cleanly(
+    settings: Settings, token_verifier, user_service
+) -> None:
+    """A media-processing failure surfaces as a FAILED analysis, not a 500."""
+
+    class BrokenOcr:
+        def extract_text(self, image_bytes: bytes):
+            raise MediaProcessingError("cannot decode image")
+
+    service = AnalysisService(
+        MockAnalysisRepository(),
+        media_pipeline=MediaPipeline(
+            url_fetcher=FakeUrlFetcher(),
+            ocr_adapter=BrokenOcr(),  # type: ignore[arg-type]
+            forensics_adapter=MockForensicsAdapter(),
+        ),
+    )
+    app = create_app(
+        settings,
+        token_verifier=token_verifier,
+        user_service=user_service,
+        analysis_service=service,
+    )
+    image = base64.b64encode(b"fake-image").decode()
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.post(
+            "/api/v1/analysis",
+            json={"input_type": "image", "image": image},
+            headers=_headers(),
+        )
+
+    assert response.status_code == 202
+    data = response.json()["data"]
+    assert data["status"] == "failed"
+    assert data["failure_reason"] == "analysis.media_failed"
 
 
 def test_submit_failed_when_provider_errors(

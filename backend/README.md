@@ -76,3 +76,14 @@ backend/
   ``304 Not Modified``/ETag support, and cache headers; seed migration
   covering en/pt/es/fr/de/ar/ja; typed key registry and locale utilities
   in ``packages/shared_utils`` (Phase 8; 179 backend tests + 23 Dart).
+- **Phase 13 (done):** Media pipeline — URL & image analysis.
+  ``POST /analysis`` accepts text, URL, and image input. URLs are fetched
+  by the SSRF-guarded ``HttpUrlFetcher`` (public-address-only DNS/IP
+  guard, capped redirects, size-capped streaming, HTML→text extraction);
+  images are decoded at the API boundary with a byte cap and run through
+  the Tesseract OCR + OpenCV forensics adapters via the new
+  ``MediaPipeline`` application service. Reports carry the media context
+  (fetch metadata / OCR + forensics); failures dead-letter to FAILED
+  with ``analysis.fetch_failed`` / ``analysis.media_failed``. New
+  settings: ``MEDIA_FETCH_TIMEOUT``, ``MEDIA_FETCH_MAX_BYTES``,
+  ``MEDIA_IMAGE_MAX_BYTES`` (143 backend tests).

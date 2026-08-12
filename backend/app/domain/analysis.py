@@ -61,6 +61,11 @@ class InvalidStatusTransitionError(Exception):
 # truth for the codes clients observe.
 FAILURE_PROCESSING = "analysis.processing_failed"
 FAILURE_BLOCKED = "analysis.blocked_by_guard"
+# Phase 13 media pipelines: the submitted URL could not be fetched safely
+# (SSRF guard, unreachable host, oversized response) or the submitted image
+# could not be decoded/processed by the OCR + forensics pipeline.
+FAILURE_FETCH = "analysis.fetch_failed"
+FAILURE_MEDIA = "analysis.media_failed"
 
 
 def _utcnow() -> datetime:

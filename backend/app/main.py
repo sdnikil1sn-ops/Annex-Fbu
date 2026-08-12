@@ -20,6 +20,7 @@ from app.application.ports.auth import TokenVerifier
 from app.application.ports.media import ForensicsAdapter, OcrAdapter
 from app.application.services.analysis_service import AnalysisService
 from app.application.services.i18n_service import I18nService
+from app.application.services.media_pipeline import MediaPipeline
 from app.application.services.user_service import UserService
 from app.core.checks import DatabaseHealthCheck, DependencyCheck, RedisHealthCheck
 from app.core.config import Settings, get_settings
@@ -27,7 +28,11 @@ from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
 from app.infrastructure.ai.factory import build_claim_analyzer
 from app.infrastructure.auth.firebase_token_verifier import FirebaseTokenVerifier
-from app.infrastructure.media.factory import build_forensics_adapter, build_ocr_adapter
+from app.infrastructure.media.factory import (
+    build_forensics_adapter,
+    build_media_pipeline,
+    build_ocr_adapter,
+)
 from app.infrastructure.rate_limit.factory import build_rate_limiter
 from app.infrastructure.rate_limit.limiter import RateLimiter
 from app.infrastructure.rate_limit.middleware import RateLimitMiddleware
@@ -45,6 +50,7 @@ def create_app(
     claim_analyzer: ClaimAnalyzer | None = None,
     ocr_adapter: OcrAdapter | None = None,
     forensics_adapter: ForensicsAdapter | None = None,
+    media_pipeline: MediaPipeline | None = None,
     analysis_service: AnalysisService | None = None,
     i18n_service: I18nService | None = None,
     rate_limiter: RateLimiter | None = None,
@@ -64,6 +70,9 @@ def create_app(
         ocr_adapter: Optional OCR override; defaults to Tesseract with a
             mock fallback when the binary is missing.
         forensics_adapter: Optional forensics override; defaults to OpenCV.
+        media_pipeline: Optional media pipeline override (tests inject
+            mocks); defaults to the SSRF-guarded URL fetcher + the bound
+            OCR/forensics adapters (Phase 13).
         analysis_service: Optional analysis service override (tests use the
             in-memory repository); defaults to the PostgreSQL-backed service
             when a database is configured, enqueuing work on the Celery
@@ -126,6 +135,11 @@ def create_app(
     app.state.claim_analyzer = claim_analyzer or build_claim_analyzer(settings)
     app.state.ocr_adapter = ocr_adapter or build_ocr_adapter(settings)
     app.state.forensics_adapter = forensics_adapter or build_forensics_adapter()
+    app.state.media_pipeline = media_pipeline or build_media_pipeline(
+        settings,
+        ocr_adapter=app.state.ocr_adapter,
+        forensics_adapter=app.state.forensics_adapter,
+    )
 
     # Analysis pipeline (Phase 4 domain + Phase 6 API + Phase 7 workers):
     # wire the service from settings unless overridden (tests inject the
@@ -138,6 +152,7 @@ def create_app(
         analysis_service = AnalysisService(
             PostgresAnalysisRepository(settings.database_url),
             task_dispatcher=task_dispatcher,
+            media_pipeline=app.state.media_pipeline,
         )
     app.state.analysis_service = analysis_service
 

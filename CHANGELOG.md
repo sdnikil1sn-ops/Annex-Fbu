@@ -319,6 +319,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     implemented end to end (web build → `deploy-web` job → wire
     `ALLOWED_ORIGINS` + Firebase Auth authorized domains).
 
+- **Media pipeline — URL & image analysis (Phase 13).**
+  - `POST /analysis` now accepts all three input types. **URL** inputs are
+    fetched server-side by a new SSRF-guarded fetcher
+    (`HttpUrlFetcher`): the scheme must be http(s), the host is resolved
+    up front and every address (IPv4/IPv6) must be public, redirects are
+    re-validated and capped, and the body is streamed with a timeout and
+    a hard size cap. HTML is stripped to visible text (script/style
+    excluded, output capped for the analyzer). **Image** inputs are
+    decoded at the API boundary (base64 or `data:` URL) with a size cap,
+    then OCR (Tesseract) + tamper forensics (OpenCV) extract the text
+    and signals to analyze.
+  - `MediaPipeline` application service (ADR-0003) turns any input into
+    `(text, media_context)`; the report now carries the media context:
+    fetch metadata (`input.type`/`url`/`final_url`/`status`) for URLs and
+    OCR text/confidence + forensics risk/signals for images.
+  - Failure codes `analysis.fetch_failed` (URL) and `analysis.media_failed`
+    (image) dead-letter cleanly in the worker; the inline pipeline maps
+    them to FAILED analyses — never 5xx. Transient fetch errors retry with
+    the existing backoff; undecodable media does not retry.
+  - Config: `MEDIA_FETCH_TIMEOUT`, `MEDIA_FETCH_MAX_BYTES`,
+    `MEDIA_IMAGE_MAX_BYTES`; wiring in the composition root and the Celery
+    worker (`_build_media_pipeline`).
+  - `packages/shared_models`: `AnalysisReport` gains an optional
+    `MediaContext` (URL fetch metadata or OCR + forensics) with strict
+    JSON round-trip tests.
+  - Tests: SSRF guard rules (private/reserved ranges, credentials, DNS
+    resolution), full fetch path against an in-process HTTP server
+    (extraction, redirects, size cap, HTTP errors), pipeline unit tests,
+    API submission/failure tests for all three input types, and worker
+    media scenarios (143 backend + 18 Dart tests total).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -331,6 +362,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `apps/mobile/README.md`, `apps/web/README.md`, and
   `.github/workflows/README.md` updated for the Phase 12 web baseline
   (status, package/workflow tables, mobile feature-code relocation).
+- `docs/api/v1-endpoints.md` updated with the Phase 13 media failure codes
+  (`analysis.fetch_failed` / `analysis.media_failed`), and the executable
+  OpenAPI contract regenerated with the URL/image submit schema (ADR-0002);
+  `backend/README.md` documents the Phase 13 media pipeline status.
 
 ### Deprecated
 

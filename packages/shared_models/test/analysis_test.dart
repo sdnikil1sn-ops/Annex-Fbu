@@ -79,6 +79,82 @@ void main() {
     });
   });
 
+  group('MediaContext', () {
+    test('parses the URL fetch context from the report', () {
+      final report = AnalysisReport.fromJson(const {
+        'summary': 's',
+        'claims': [],
+        'media': {
+          'input': {
+            'type': 'url',
+            'url': 'https://example.com/article',
+            'final_url': 'https://example.com/redirected',
+            'status': 200,
+          },
+        },
+      });
+      final media = report.media!;
+      expect(media.inputType, 'url');
+      expect(media.url, 'https://example.com/article');
+      expect(media.finalUrl, 'https://example.com/redirected');
+      expect(media.httpStatus, 200);
+      expect(media.ocrText, isNull);
+      expect(media.riskScore, isNull);
+
+      // Round-trips through the wire shape.
+      expect(
+        MediaContext.fromJson(media.toJson()).toJson(),
+        media.toJson(),
+      );
+    });
+
+    test('parses the image OCR + forensics context', () {
+      final media = MediaContext.fromJson(const {
+        'input': {'type': 'image', 'mime': 'image/png', 'size_bytes': 2048},
+        'ocr': {'text': 'caption text', 'confidence': 0.92},
+        'forensics': {
+          'risk_score': 0.35,
+          'signals': {'ela': 'low'}
+        },
+      });
+      expect(media.inputType, 'image');
+      expect(media.mime, 'image/png');
+      expect(media.sizeBytes, 2048);
+      expect(media.ocrText, 'caption text');
+      expect(media.ocrConfidence, closeTo(0.92, 0.001));
+      expect(media.riskScore, closeTo(0.35, 0.001));
+      expect(media.signals, {'ela': 'low'});
+      expect(media.url, isNull);
+
+      final decoded = MediaContext.fromJson(media.toJson());
+      expect(decoded.ocrText, media.ocrText);
+      expect(decoded.signals, media.signals);
+      expect(decoded.toJson(), media.toJson());
+    });
+
+    test('text reports carry no media context', () {
+      const report = AnalysisReport(summary: 's', claims: []);
+      expect(report.media, isNull);
+    });
+    test('rejects a media object without an input', () {
+      expect(
+        () => MediaContext.fromJson(const {
+          'ocr': {'text': 'x'}
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects an input without a type', () {
+      expect(
+        () => MediaContext.fromJson(const {
+          'input': {'url': 'x'}
+        }),
+        throwsFormatException,
+      );
+    });
+  });
+
   group('AnalysisReport', () {
     test('credibility score averages claim verifiability', () {
       const report = AnalysisReport(

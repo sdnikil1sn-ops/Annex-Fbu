@@ -1,13 +1,15 @@
-"""Composition-root factory for media adapters (OCR + forensics)."""
+"""Composition-root factory for media adapters (OCR + forensics + pipeline)."""
 
 from __future__ import annotations
 
 import logging
 
 from app.application.ports.media import ForensicsAdapter, OcrAdapter
+from app.application.services.media_pipeline import MediaPipeline
 from app.core.config import Settings
 from app.core.exceptions import ConfigurationError
 from app.infrastructure.media.mock_media_adapters import MockOcrAdapter
+from app.infrastructure.media.url_fetcher import build_url_fetcher
 
 logger = logging.getLogger(__name__)
 
@@ -47,3 +49,35 @@ def build_forensics_adapter() -> ForensicsAdapter:
     from app.infrastructure.media.opencv_forensics import OpenCvForensicsAdapter
 
     return OpenCvForensicsAdapter()
+
+
+def build_media_pipeline(
+    settings: Settings,
+    *,
+    ocr_adapter: OcrAdapter | None = None,
+    forensics_adapter: ForensicsAdapter | None = None,
+) -> MediaPipeline:
+    """Build the media pipeline: SSRF-guarded fetch + OCR + forensics (Phase 13).
+
+    The single construction site for the pipeline, shared by the API
+    composition root and the Celery worker so both processes behave
+    identically (ADR-0008). Fetch timeouts/limits come from settings; the
+    OCR factory falls back to the explicit mock when the Tesseract binary
+    is missing. Adapter overrides let ``create_app`` inject test doubles
+    exactly like the other composition-root builders.
+
+    Args:
+        settings: Application settings with fetch and OCR configuration.
+        ocr_adapter: Optional OCR adapter override (tests inject mocks).
+        forensics_adapter: Optional forensics override (tests inject mocks).
+
+    Returns:
+        A wired ``MediaPipeline`` over the configured media adapters.
+    """
+    return MediaPipeline(
+        url_fetcher=build_url_fetcher(),
+        ocr_adapter=ocr_adapter or build_ocr_adapter(settings),
+        forensics_adapter=forensics_adapter or build_forensics_adapter(),
+        fetch_timeout=settings.media_fetch_timeout,
+        fetch_max_bytes=settings.media_fetch_max_bytes,
+    )
