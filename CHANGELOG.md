@@ -525,6 +525,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     range validation, anonymous vs. authenticated profile reads), and
     repository integration tests (305 backend tests total).
 
+- **Educator tools in the Flutter apps — web + mobile (Phase 20).**
+  - `packages/shared_models`: new `ClassRoom` / `ClassMember` /
+    `Assignment` / `StudentProgress` / `AssignmentProgress` models
+    mirroring the Phase 17 backend contract (roster, invite code,
+    completion stats, per-student progress), with strict JSON round-trip
+    tests.
+  - `packages/shared_utils`: new typed `StringKeys` for the educator
+    chrome (tab title, create/join labels, invite-code prompt, role
+    names, completion template, due date) plus a backend i18n seed
+    migration (`20260815000002_class_i18n.sql`) so the UI strings
+    localize through the runtime bundles (ADR-0007, en + pt subset).
+  - `packages/shared_features`: the `AnalysisApi` interface gains
+    createClass/fetchClasses/fetchClass/joinClass/assignLesson/
+    fetchClassProgress/fetchAssignmentProgress/deleteAssignment/
+    removeMember/deleteClass (HTTP + mock — the mock seeds a class with
+    roster and invite code so the tab has content out of the box); a new
+    `ClassesController` drives list/detail/create/join/assign/progress
+    with busy and error state; a new `ClassesScreen` renders the class
+    list (role + invite-code pills), create/join dialogs, the class
+    detail (member roster, assignments with completion stats, teacher
+    assign/progress/delete actions), and a per-student progress sheet.
+  - App shells: the web `WebShell` gains a Classes destination (rail +
+    bottom nav) and the mobile `_MainShell` a fourth tab; both wire a
+    `ClassesController` provider and prefetch the class list per app
+    instance.
+  - Tests: controller unit tests (create/join/assign idempotency,
+    progress derivation, roster/assignment mutations), web/mobile widget
+    tests covering browse → open → roster, and the classroom model
+    round-trip suite (33 shared_models + 35 shared_features + 11 app
+    widget tests).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -562,6 +593,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (community aggregate on profiles, rate endpoint, my_rating
   visibility); `backend/README.md` documents the Phase 19 status;
   OpenAPI contract regenerated.
+- `apps/web/README.md` and `apps/mobile/README.md` updated with the
+  Phase 20 educator-tools status.
 
 ### Deprecated
 

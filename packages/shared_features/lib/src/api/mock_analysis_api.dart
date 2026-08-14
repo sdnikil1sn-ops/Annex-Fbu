@@ -19,7 +19,9 @@ class MockAnalysisApi implements AnalysisApi {
     this.failTrigger = '!!!',
     this.initialReport,
     this.delay = const Duration(milliseconds: 10),
-  });
+  }) {
+    _seedClass();
+  }
 
   /// Substring that makes submitted text fail analysis.
   final String failTrigger;
@@ -34,6 +36,15 @@ class MockAnalysisApi implements AnalysisApi {
   final List<String> _inputs = [];
   final Map<String, DateTime> _completedLessons = {};
   int _nextId = 1;
+
+  // Educator state (Phase 20): one seeded class owned by the mock caller
+  // so the classes tab has content out of the box. Seeded eagerly so a
+  // delete-class followed by a list refresh does not resurrect it.
+  final List<ClassRoom> _classes = [];
+  final Map<String, List<ClassMember>> _membersByClass = {};
+  final Map<String, List<Assignment>> _assignmentsByClass = {};
+  int _nextClassId = 1;
+  int _nextAssignmentId = 1;
 
   /// Whether the last submission was recorded (test hook).
   String? lastSubmittedText;
@@ -248,6 +259,242 @@ class MockAnalysisApi implements AnalysisApi {
   }
 
   @override
+  Future<ClassRoom> createClass(String name, String description) async {
+    await Future<void>.delayed(delay);
+    final id = 'c0000000-0000-4000-8000-0000000000${_nextClassId++}';
+    final now = DateTime.now().toUtc();
+    final room = ClassRoom(
+      id: id,
+      ownerId: 'mock-owner',
+      name: name,
+      description: description,
+      inviteCode: _nextInviteCode(),
+      role: 'teacher',
+      createdAt: now,
+    );
+    _classes.add(room);
+    _membersByClass[id] = [
+      ClassMember(
+        userId: 'mock-owner',
+        role: 'teacher',
+        displayName: 'Ms. Alvarez',
+        joinedAt: now,
+      ),
+    ];
+    _assignmentsByClass[id] = [];
+    return room;
+  }
+
+  @override
+  Future<List<ClassRoom>> fetchClasses() async {
+    await Future<void>.delayed(delay);
+    return List.unmodifiable(_classes);
+  }
+
+  @override
+  Future<ClassRoom> fetchClass(String id) async {
+    await Future<void>.delayed(delay);
+    final room = _findClass(id);
+    if (room == null) {
+      throw const ApiException('class.not_found', 'Class not found');
+    }
+    final members = _membersByClass[id] ?? const <ClassMember>[];
+    final assignments = _assignmentsByClass[id] ?? const <Assignment>[];
+    return _copyWith(room, members: members, assignments: assignments);
+  }
+
+  @override
+  Future<ClassMember> joinClass(String classId, String inviteCode) async {
+    await Future<void>.delayed(delay);
+    final room = _findClass(classId);
+    if (room == null || room.inviteCode != inviteCode) {
+      throw const ApiException('class.not_found', 'Class not found');
+    }
+    final members = _membersByClass[classId]!;
+    final existing = members.where((m) => m.userId == 'mock-student');
+    if (existing.isEmpty) {
+      members.add(
+        ClassMember(
+          userId: 'mock-student',
+          role: 'student',
+          displayName: 'Student One',
+          joinedAt: DateTime.now().toUtc(),
+        ),
+      );
+    }
+    return members.last;
+  }
+
+  @override
+  Future<Assignment> assignLesson(
+    String classId,
+    String lessonRef, {
+    DateTime? dueAt,
+  }) async {
+    await Future<void>.delayed(delay);
+    final lesson = _findLesson(lessonRef);
+    if (lesson == null) {
+      throw const ApiException('lesson.not_found', 'Lesson not found');
+    }
+    final assignments = _assignmentsByClass[classId];
+    if (assignments == null) {
+      throw const ApiException('class.not_found', 'Class not found');
+    }
+    // Idempotent per (class, lesson): re-assignment returns the existing.
+    for (final existing in assignments) {
+      if (existing.lessonId == lesson.id) return existing;
+    }
+    final memberCount = (_membersByClass[classId] ?? const []).length;
+    final assignment = Assignment(
+      id: 'a0000000-0000-4000-8000-0000000000${_nextAssignmentId++}',
+      classId: classId,
+      lessonId: lesson.id,
+      lessonSlug: lesson.slug,
+      lessonTitle: _localized(lesson, 'en').title,
+      dueAt: dueAt,
+      createdAt: DateTime.now().toUtc(),
+      completedCount: _completedLessons.containsKey(lesson.id) ? 1 : 0,
+      memberCount: memberCount,
+    );
+    assignments.add(assignment);
+    return assignment;
+  }
+
+  @override
+  Future<List<AssignmentProgress>> fetchClassProgress(String classId) async {
+    await Future<void>.delayed(delay);
+    final assignments = _assignmentsByClass[classId];
+    if (assignments == null) {
+      throw const ApiException('class.not_found', 'Class not found');
+    }
+    final members = _membersByClass[classId] ?? const <ClassMember>[];
+    final students = members.where((m) => !m.isTeacher).toList();
+    return assignments.map((assignment) {
+      return AssignmentProgress(
+        assignment: assignment,
+        students: students
+            .map(
+              (student) => StudentProgress(
+                userId: student.userId,
+                displayName: student.displayName,
+                completed: _completedLessons.containsKey(assignment.lessonId),
+                completedAt: _completedLessons[assignment.lessonId],
+              ),
+            )
+            .toList(),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<AssignmentProgress> fetchAssignmentProgress(
+    String classId,
+    String assignmentId,
+  ) async {
+    await Future<void>.delayed(delay);
+    final progresses = await fetchClassProgress(classId);
+    for (final progress in progresses) {
+      if (progress.assignment.id == assignmentId) return progress;
+    }
+    throw const ApiException('class.not_found', 'Class not found');
+  }
+
+  @override
+  Future<void> deleteAssignment(String classId, String assignmentId) async {
+    await Future<void>.delayed(delay);
+    final assignments = _assignmentsByClass[classId];
+    if (assignments == null) {
+      throw const ApiException('class.not_found', 'Class not found');
+    }
+    assignments.removeWhere((a) => a.id == assignmentId);
+  }
+
+  @override
+  Future<void> removeMember(String classId, String memberId) async {
+    await Future<void>.delayed(delay);
+    final members = _membersByClass[classId];
+    if (members == null) {
+      throw const ApiException('class.not_found', 'Class not found');
+    }
+    members.removeWhere((m) => m.userId == memberId);
+  }
+
+  @override
+  Future<void> deleteClass(String classId) async {
+    await Future<void>.delayed(delay);
+    _classes.removeWhere((c) => c.id == classId);
+    _membersByClass.remove(classId);
+    _assignmentsByClass.remove(classId);
+  }
+
+  // --- class internals --------------------------------------------------
+
+  static const _inviteAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  static String _nextInviteCode() {
+    // Deterministic per instance; the code alphabet matches the backend
+    // (no confusing characters).
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return List.generate(8, (index) {
+      final shift = (now ~/ (index + 7)) % _inviteAlphabet.length;
+      return _inviteAlphabet[shift];
+    }).join();
+  }
+
+  ClassRoom? _findClass(String id) {
+    for (final room in _classes) {
+      if (room.id == id) return room;
+    }
+    return null;
+  }
+
+  void _seedClass() {
+    final room = ClassRoom(
+      id: 'c0000000-0000-4000-8000-000000000000',
+      ownerId: 'mock-owner',
+      name: 'Media Literacy 101',
+      description: 'First period — verify before you share.',
+      inviteCode: 'ANNEX234',
+      role: 'teacher',
+      createdAt: DateTime.utc(2026, 8, 13),
+    );
+    _classes.add(room);
+    _membersByClass[room.id] = [
+      ClassMember(
+        userId: 'mock-owner',
+        role: 'teacher',
+        displayName: 'Ms. Alvarez',
+        joinedAt: DateTime.utc(2026, 8, 13),
+      ),
+      ClassMember(
+        userId: 'mock-student',
+        role: 'student',
+        displayName: 'Student One',
+        joinedAt: DateTime.utc(2026, 8, 13),
+      ),
+    ];
+    _assignmentsByClass[room.id] = [];
+  }
+
+  static ClassRoom _copyWith(
+    ClassRoom room, {
+    required List<ClassMember> members,
+    required List<Assignment> assignments,
+  }) {
+    return ClassRoom(
+      id: room.id,
+      ownerId: room.ownerId,
+      name: room.name,
+      description: room.description,
+      inviteCode: room.inviteCode,
+      role: room.role,
+      createdAt: room.createdAt,
+      members: members,
+      assignments: assignments,
+    );
+  }
+
+  @override
   Future<LocaleList> fetchLocales() async {
     return const LocaleList(
       defaultLocale: 'en',
@@ -324,6 +571,64 @@ class MockAnalysisApi implements AnalysisApi {
       ),
       'lessons.error': BundleEntry(
         value: 'Could not load lessons.',
+        plural: 'none',
+      ),
+      'classes.title': BundleEntry(value: 'Classes', plural: 'none'),
+      'classes.create': BundleEntry(value: 'Create class', plural: 'none'),
+      'classes.join': BundleEntry(value: 'Join class', plural: 'none'),
+      'classes.invite_code': BundleEntry(value: 'Invite code', plural: 'none'),
+      'classes.name': BundleEntry(value: 'Class name', plural: 'none'),
+      'classes.description': BundleEntry(value: 'Description', plural: 'none'),
+      'classes.members': BundleEntry(value: 'Members', plural: 'none'),
+      'classes.assignments': BundleEntry(value: 'Assignments', plural: 'none'),
+      'classes.assign_lesson': BundleEntry(
+        value: 'Assign lesson',
+        plural: 'none',
+      ),
+      'classes.progress': BundleEntry(value: 'Progress', plural: 'none'),
+      'classes.role_teacher': BundleEntry(value: 'Teacher', plural: 'none'),
+      'classes.role_student': BundleEntry(value: 'Student', plural: 'none'),
+      'classes.empty': BundleEntry(
+        value: 'No classes yet. Create one or join with a code.',
+        plural: 'none',
+      ),
+      'classes.error': BundleEntry(
+        value: 'Could not load classes.',
+        plural: 'none',
+      ),
+      'classes.completed_count': BundleEntry(
+        value: '{completed}/{total} completed',
+        plural: 'other',
+      ),
+      'classes.delete_class': BundleEntry(
+        value: 'Delete class',
+        plural: 'none',
+      ),
+      'classes.remove_member': BundleEntry(
+        value: 'Remove member',
+        plural: 'none',
+      ),
+      'classes.remove_assignment': BundleEntry(
+        value: 'Remove assignment',
+        plural: 'none',
+      ),
+      'classes.students': BundleEntry(value: 'Students', plural: 'none'),
+      'classes.no_assignments': BundleEntry(
+        value: 'No lessons assigned yet.',
+        plural: 'none',
+      ),
+      'classes.no_members': BundleEntry(
+        value: 'No students have joined yet.',
+        plural: 'none',
+      ),
+      'classes.due': BundleEntry(value: 'Due {date}', plural: 'other'),
+      'classes.class_id': BundleEntry(value: 'Class ID', plural: 'none'),
+      'classes.join_hint': BundleEntry(
+        value: 'Enter the class ID and invite code from your teacher.',
+        plural: 'none',
+      ),
+      'classes.create_success': BundleEntry(
+        value: 'Class created. Share the invite code with your students.',
         plural: 'none',
       ),
       'auth.sign_in': BundleEntry(value: 'Sign in', plural: 'none'),

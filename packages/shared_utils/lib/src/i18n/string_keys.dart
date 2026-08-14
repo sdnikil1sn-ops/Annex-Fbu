@@ -54,6 +54,33 @@ abstract final class StringKeys {
   static const lessonsEmpty = 'lessons.empty';
   static const lessonsError = 'lessons.error';
 
+  // classes (Phase 17/20)
+  static const classesTitle = 'classes.title';
+  static const classesCreate = 'classes.create';
+  static const classesJoin = 'classes.join';
+  static const classesInviteCode = 'classes.invite_code';
+  static const classesName = 'classes.name';
+  static const classesDescription = 'classes.description';
+  static const classesMembers = 'classes.members';
+  static const classesAssignments = 'classes.assignments';
+  static const classesAssignLesson = 'classes.assign_lesson';
+  static const classesProgress = 'classes.progress';
+  static const classesRoleTeacher = 'classes.role_teacher';
+  static const classesRoleStudent = 'classes.role_student';
+  static const classesEmpty = 'classes.empty';
+  static const classesError = 'classes.error';
+  static const classesCompletedCount = 'classes.completed_count';
+  static const classesDeleteClass = 'classes.delete_class';
+  static const classesRemoveMember = 'classes.remove_member';
+  static const classesRemoveAssignment = 'classes.remove_assignment';
+  static const classesStudents = 'classes.students';
+  static const classesNoAssignments = 'classes.no_assignments';
+  static const classesNoMembers = 'classes.no_members';
+  static const classesDue = 'classes.due';
+  static const classesClassId = 'classes.class_id';
+  static const classesJoinHint = 'classes.join_hint';
+  static const classesCreateSuccess = 'classes.create_success';
+
   // settings
   static const settingsTitle = 'settings.title';
   static const settingsLanguage = 'settings.language';
@@ -102,6 +129,31 @@ abstract final class StringKeys {
     lessonsDifficultyAdvanced,
     lessonsEmpty,
     lessonsError,
+    classesTitle,
+    classesCreate,
+    classesJoin,
+    classesInviteCode,
+    classesName,
+    classesDescription,
+    classesMembers,
+    classesAssignments,
+    classesAssignLesson,
+    classesProgress,
+    classesRoleTeacher,
+    classesRoleStudent,
+    classesEmpty,
+    classesError,
+    classesCompletedCount,
+    classesDeleteClass,
+    classesRemoveMember,
+    classesRemoveAssignment,
+    classesStudents,
+    classesNoAssignments,
+    classesNoMembers,
+    classesDue,
+    classesClassId,
+    classesJoinHint,
+    classesCreateSuccess,
     settingsTitle,
     settingsLanguage,
     settingsTheme,

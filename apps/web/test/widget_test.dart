@@ -150,4 +150,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Completed'), findsWidgets);
   });
+
+  testWidgets('classes tab lists classes and shows the seeded invite code', (
+    tester,
+  ) async {
+    final services = _buildServices();
+    addTearDown(services.authController.dispose);
+    addTearDown(services.i18n.dispose);
+    addTearDown(services.settings.dispose);
+    await services.i18n.load();
+    await services.authController.signInAnonymously();
+
+    await tester.binding.setSurfaceSize(const Size(480, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_wrap(services));
+    await tester.pumpAndSettle();
+
+    // Switch to the Classes tab; the mock seeds one class.
+    await tester.tap(find.text('Classes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Media Literacy 101'), findsOneWidget);
+    expect(find.textContaining('ANNEX234'), findsOneWidget);
+
+    // Open the class and verify the roster renders.
+    await tester.tap(find.text('Media Literacy 101'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ms. Alvarez'), findsOneWidget);
+    expect(find.text('Student One'), findsOneWidget);
+  });
 }

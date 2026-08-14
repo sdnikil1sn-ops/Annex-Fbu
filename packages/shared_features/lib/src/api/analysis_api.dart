@@ -46,6 +46,43 @@ abstract interface class AnalysisApi {
 
   /// Mark a lesson complete (idempotent; the first completion wins).
   Future<LessonProgress> completeLesson(String idOrSlug);
+
+  /// Create a class; the caller becomes its teacher.
+  Future<ClassRoom> createClass(String name, String description);
+
+  /// The caller's classes (owned or joined) with their membership role.
+  Future<List<ClassRoom>> fetchClasses();
+
+  /// One class with its member roster and assignments (members only).
+  Future<ClassRoom> fetchClass(String id);
+
+  /// Join a class by its invite code (idempotent).
+  Future<ClassMember> joinClass(String classId, String inviteCode);
+
+  /// Assign a published lesson to a class (teacher only, idempotent).
+  Future<Assignment> assignLesson(
+    String classId,
+    String lessonRef, {
+    DateTime? dueAt,
+  });
+
+  /// Per-assignment, per-student completion for a class (teacher only).
+  Future<List<AssignmentProgress>> fetchClassProgress(String classId);
+
+  /// Per-student completion for one assignment (teacher only).
+  Future<AssignmentProgress> fetchAssignmentProgress(
+    String classId,
+    String assignmentId,
+  );
+
+  /// Remove an assignment (teacher only).
+  Future<void> deleteAssignment(String classId, String assignmentId);
+
+  /// Remove a member from a class (teacher only).
+  Future<void> removeMember(String classId, String memberId);
+
+  /// Delete a class and its members/assignments (owner only).
+  Future<void> deleteClass(String classId);
 }
 
 /// HTTP implementation against the v1 backend API.
@@ -160,6 +197,115 @@ class HttpAnalysisApi implements AnalysisApi {
     return LessonProgress.fromJson(Map<String, dynamic>.from(data));
   }
 
+  @override
+  Future<ClassRoom> createClass(String name, String description) async {
+    final json = await _post('/classes', {
+      'name': name,
+      'description': description,
+    });
+    return ClassRoom.fromJson(_dataMap(json, 'classes'));
+  }
+
+  @override
+  Future<List<ClassRoom>> fetchClasses() async {
+    final json = await _get('/classes');
+    final data = json['data'];
+    if (data is! List) {
+      throw const ApiException(
+        'classes.invalid_response',
+        'Malformed classes response',
+      );
+    }
+    return data
+        .map(
+          (item) => ClassRoom.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+  }
+
+  @override
+  Future<ClassRoom> fetchClass(String id) async {
+    final json = await _get('/classes/$id');
+    return ClassRoom.fromJson(_dataMap(json, 'classes'));
+  }
+
+  @override
+  Future<ClassMember> joinClass(String classId, String inviteCode) async {
+    final json = await _post('/classes/$classId/join', {
+      'invite_code': inviteCode,
+    });
+    return ClassMember.fromJson(_dataMap(json, 'classes'));
+  }
+
+  @override
+  Future<Assignment> assignLesson(
+    String classId,
+    String lessonRef, {
+    DateTime? dueAt,
+  }) async {
+    final json = await _post('/classes/$classId/assignments', {
+      'lesson_ref': lessonRef,
+      if (dueAt != null) 'due_at': dueAt.toIso8601String(),
+    });
+    return Assignment.fromJson(_dataMap(json, 'classes'));
+  }
+
+  @override
+  Future<List<AssignmentProgress>> fetchClassProgress(String classId) async {
+    final json = await _get('/classes/$classId/progress');
+    final data = json['data'];
+    if (data is! List) {
+      throw const ApiException(
+        'classes.invalid_response',
+        'Malformed progress response',
+      );
+    }
+    return data
+        .map(
+          (item) => AssignmentProgress.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<AssignmentProgress> fetchAssignmentProgress(
+    String classId,
+    String assignmentId,
+  ) async {
+    final json = await _get(
+      '/classes/$classId/assignments/$assignmentId/progress',
+    );
+    return AssignmentProgress.fromJson(_dataMap(json, 'classes'));
+  }
+
+  @override
+  Future<void> deleteAssignment(String classId, String assignmentId) async {
+    await _delete('/classes/$classId/assignments/$assignmentId');
+  }
+
+  @override
+  Future<void> removeMember(String classId, String memberId) async {
+    await _delete('/classes/$classId/members/$memberId');
+  }
+
+  @override
+  Future<void> deleteClass(String classId) async {
+    await _delete('/classes/$classId');
+  }
+
+  Map<String, dynamic> _dataMap(Map<String, dynamic> json, String prefix) {
+    final data = json['data'];
+    if (data is! Map) {
+      throw ApiException(
+        '$prefix.invalid_response',
+        'Malformed $prefix response',
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<Map<String, dynamic>> _get(String path) async {
     final response = await _client.get(_uri(path), headers: _headers());
     return _decode(response);
@@ -174,6 +320,11 @@ class HttpAnalysisApi implements AnalysisApi {
       headers: {..._headers(), 'content-type': 'application/json'},
       body: jsonEncode(body),
     );
+    return _decode(response);
+  }
+
+  Future<Map<String, dynamic>> _delete(String path) async {
+    final response = await _client.delete(_uri(path), headers: _headers());
     return _decode(response);
   }
 

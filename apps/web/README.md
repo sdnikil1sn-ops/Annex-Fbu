@@ -51,6 +51,10 @@ platform-specific shell, theming, and entry-point code.
 - **Phase 16 (done):** lessons curriculum surfaced — the education flow
   (localized lesson list with progress, content detail, idempotent
   completion) ships from `shared_features` as a rail/nav destination.
+- **Phase 20 (done):** educator tools surfaced — the classes flow
+  (list with role + invite-code pills, create/join dialogs, roster,
+  assignments with completion stats, teacher progress/delete actions)
+  ships from `shared_features` as a rail/nav destination.
 
 Run it: `flutter run -d chrome` (debug builds use the mock API; point at the real
 backend with `--dart-define=ANNEX_API_URL=... --dart-define=ANNEX_USE_MOCK=false`).

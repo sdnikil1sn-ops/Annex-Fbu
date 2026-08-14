@@ -20,6 +20,7 @@ void main() {
             'auth',
             'errors',
             'lessons',
+            'classes',
             'settings'
           }));
     });

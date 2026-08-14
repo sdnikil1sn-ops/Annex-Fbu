@@ -51,6 +51,9 @@ class _Root extends StatelessWidget {
         ChangeNotifierProvider<LessonsController>(
           create: (_) => services.lessonsController(),
         ),
+        ChangeNotifierProvider<ClassesController>(
+          create: (_) => services.classesController(),
+        ),
       ],
       child: const _MainShell(),
     );
@@ -65,10 +68,15 @@ class _MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final i18n = AppScope.of(context).i18n;
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         body: const TabBarView(
-          children: [AnalysisScreen(), LessonsScreen(), SettingsScreen()],
+          children: [
+            AnalysisScreen(),
+            LessonsScreen(),
+            ClassesScreen(),
+            SettingsScreen(),
+          ],
         ),
         bottomNavigationBar: TabBar(
           tabs: [
@@ -79,6 +87,10 @@ class _MainShell extends StatelessWidget {
             Tab(
               icon: const Icon(Icons.menu_book_outlined),
               text: i18n.t(StringKeys.lessonsTitle),
+            ),
+            Tab(
+              icon: const Icon(Icons.school_outlined),
+              text: i18n.t(StringKeys.classesTitle),
             ),
             Tab(
               icon: const Icon(Icons.settings_outlined),

@@ -16,6 +16,8 @@ export 'src/features/auth/auth_controller.dart';
 export 'src/features/auth/auth_gateway.dart';
 export 'src/features/auth/mock_auth_gateway.dart';
 export 'src/features/auth/sign_in_screen.dart';
+export 'src/features/classes/classes_controller.dart';
+export 'src/features/classes/classes_screen.dart';
 export 'src/features/lessons/lessons_controller.dart';
 export 'src/features/lessons/lessons_screen.dart';
 export 'src/features/settings/settings_controller.dart';

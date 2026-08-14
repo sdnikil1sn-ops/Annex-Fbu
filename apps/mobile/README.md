@@ -45,6 +45,10 @@ mobile/
 - **Phase 16 (done):** lessons curriculum surfaced — the education flow
   (localized lesson list with progress, content detail, idempotent
   completion) ships from `shared_features` as a third bottom tab.
+- **Phase 20 (done):** educator tools surfaced — the classes flow
+  (list with role + invite-code pills, create/join dialogs, roster,
+  assignments with completion stats, teacher progress/delete actions)
+  ships from `shared_features` as a fourth bottom tab.
 
 ## Implemented (Phase 9 → 12)
 
