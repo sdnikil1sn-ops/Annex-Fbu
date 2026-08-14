@@ -97,6 +97,10 @@ abstract final class StringKeys {
   static const suggestionsSubmitted = 'suggestions.submitted';
   static const suggestionsLocale = 'suggestions.locale';
   static const suggestionsContributorNote = 'suggestions.contributor_note';
+  static const suggestionsReviewQueue = 'suggestions.review_queue';
+  static const suggestionsApprove = 'suggestions.approve';
+  static const suggestionsReject = 'suggestions.reject';
+  static const suggestionsNoPending = 'suggestions.no_pending';
 
   // sources (Phase 14/19/22)
   static const sourcesTitle = 'sources.title';
@@ -203,6 +207,10 @@ abstract final class StringKeys {
     suggestionsSubmitted,
     suggestionsLocale,
     suggestionsContributorNote,
+    suggestionsReviewQueue,
+    suggestionsApprove,
+    suggestionsReject,
+    suggestionsNoPending,
     sourcesTitle,
     sourcesSearchHint,
     sourcesSearch,

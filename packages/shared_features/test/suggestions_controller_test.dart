@@ -69,6 +69,77 @@ void main() {
     expect(controller.submissions.first.value, 'Tente de novo');
   });
 
+  test('load hydrates the profile and the moderator review queue', () async {
+    final api = MockAnalysisApi(delay: Duration.zero);
+    final controller = SuggestionsController(api: api);
+
+    await controller.load('pt');
+
+    expect(controller.profile, isNotNull);
+    expect(controller.isModerator, isTrue);
+    expect(controller.pending, hasLength(2));
+    expect(controller.pending.first.locale, 'es');
+    expect(controller.pending.first.fullKey, 'lessons.complete');
+  });
+
+  test(
+    'review approves a pending suggestion and removes it from the queue',
+    () async {
+      final api = MockAnalysisApi(delay: Duration.zero);
+      final controller = SuggestionsController(api: api);
+      await controller.load('pt');
+      final first = controller.pending.first;
+
+      final ok = await controller.review(first.id, approved: true);
+
+      expect(ok, isTrue);
+      expect(controller.error, isNull);
+      expect(controller.pending, hasLength(1));
+      expect(controller.pending.any((s) => s.id == first.id), isFalse);
+    },
+  );
+
+  test(
+    'review rejects a pending suggestion and removes it from the queue',
+    () async {
+      final api = MockAnalysisApi(delay: Duration.zero);
+      final controller = SuggestionsController(api: api);
+      await controller.load('pt');
+      final first = controller.pending.first;
+
+      final ok = await controller.review(first.id, approved: false);
+
+      expect(ok, isTrue);
+      expect(controller.pending, hasLength(1));
+      expect(controller.pending.any((s) => s.id == first.id), isFalse);
+    },
+  );
+
+  test('refreshPending reloads the queue after external changes', () async {
+    final api = MockAnalysisApi(delay: Duration.zero);
+    final controller = SuggestionsController(api: api);
+    await controller.load('pt');
+
+    // Review both via the API directly, then refresh.
+    await api.reviewSuggestion(controller.pending.first.id, true);
+    await controller.refreshPending();
+
+    expect(controller.pending, hasLength(1));
+  });
+
+  test('review failure records an error and keeps the queue', () async {
+    final api = _ThrowingReviewApi();
+    final controller = SuggestionsController(api: api);
+    await controller.load('pt');
+    final first = controller.pending.first;
+
+    final ok = await controller.review(first.id, approved: true);
+
+    expect(ok, isFalse);
+    expect(controller.error, isNotNull);
+    expect(controller.pending, hasLength(2));
+  });
+
   test('load failure transitions to failed state', () async {
     final api = _ThrowingApi();
     final controller = SuggestionsController(api: api);
@@ -100,6 +171,17 @@ class _ThrowingApi extends MockAnalysisApi {
     String locale, {
     String defaultLocale = 'en',
   }) async {
+    throw const ApiException('i18n.error', 'boom');
+  }
+}
+
+/// An API whose review endpoint always fails.
+class _ThrowingReviewApi extends MockAnalysisApi {
+  @override
+  Future<TranslationSuggestion> reviewSuggestion(
+    String id,
+    bool approved,
+  ) async {
     throw const ApiException('i18n.error', 'boom');
   }
 }

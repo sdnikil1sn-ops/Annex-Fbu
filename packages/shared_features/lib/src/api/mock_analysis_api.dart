@@ -22,6 +22,7 @@ class MockAnalysisApi implements AnalysisApi {
   }) {
     _seedClass();
     _seedSources();
+    _seedReviewQueue();
   }
 
   /// Substring that makes submitted text fail analysis.
@@ -56,6 +57,10 @@ class MockAnalysisApi implements AnalysisApi {
   // per-user community ratings (one voice per user per source).
   final Map<String, Source> _sourcesByDomain = {};
   final Map<String, Map<String, int>> _ratingsByDomain = {};
+
+  // Moderator review queue (Phase 23): suggestions submitted by other
+  // mock users, awaiting approve/reject.
+  final List<TranslationSuggestion> _pendingQueue = [];
 
   /// Whether the last submission was recorded (test hook).
   String? lastSubmittedText;
@@ -664,6 +669,87 @@ class MockAnalysisApi implements AnalysisApi {
   }
 
   @override
+  Future<UserProfile> fetchMyProfile() async {
+    await Future<void>.delayed(delay);
+    return const UserProfile(
+      id: 'mock-user',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      role: 'moderator',
+      locale: 'en',
+    );
+  }
+
+  @override
+  Future<List<TranslationSuggestion>> fetchPendingSuggestions({
+    int limit = 50,
+  }) async {
+    await Future<void>.delayed(delay);
+    return List.unmodifiable(
+      _pendingQueue.where((s) => s.isPending).take(limit),
+    );
+  }
+
+  @override
+  Future<TranslationSuggestion> reviewSuggestion(
+    String id,
+    bool approved,
+  ) async {
+    await Future<void>.delayed(delay);
+    final index = _pendingQueue.indexWhere((s) => s.id == id);
+    if (index < 0) {
+      throw const ApiException(
+        'i18n.suggestion_not_found',
+        'Suggestion not found',
+      );
+    }
+    final current = _pendingQueue[index];
+    final reviewed = TranslationSuggestion(
+      id: current.id,
+      locale: current.locale,
+      namespace: current.namespace,
+      key: current.key,
+      value: current.value,
+      pluralRule: current.pluralRule,
+      suggestedBy: current.suggestedBy,
+      status: approved ? 'approved' : 'rejected',
+      createdAt: current.createdAt,
+    );
+    _pendingQueue[index] = reviewed;
+    return reviewed;
+  }
+
+  // --- review queue internals --------------------------------------------
+
+  void _seedReviewQueue() {
+    if (_pendingQueue.isNotEmpty) return;
+    final base = DateTime.now().toUtc();
+    _pendingQueue
+      ..add(
+        TranslationSuggestion(
+          id: 'q0000000-0000-4000-8000-000000000001',
+          locale: 'es',
+          namespace: 'lessons',
+          key: 'complete',
+          value: 'Completar',
+          suggestedBy: 'contributor-1',
+          createdAt: base.subtract(const Duration(days: 1)),
+        ),
+      )
+      ..add(
+        TranslationSuggestion(
+          id: 'q0000000-0000-4000-8000-000000000002',
+          locale: 'fr',
+          namespace: 'common',
+          key: 'retry',
+          value: 'Réessayer',
+          suggestedBy: 'contributor-2',
+          createdAt: base.subtract(const Duration(hours: 3)),
+        ),
+      );
+  }
+
+  @override
   Future<LocaleList> fetchLocales() async {
     return const LocaleList(
       defaultLocale: 'en',
@@ -849,6 +935,16 @@ class MockAnalysisApi implements AnalysisApi {
       'suggestions.locale': BundleEntry(value: 'Language', plural: 'none'),
       'suggestions.contributor_note': BundleEntry(
         value: 'Help translate ANNEX into your language.',
+        plural: 'none',
+      ),
+      'suggestions.review_queue': BundleEntry(
+        value: 'Review queue',
+        plural: 'none',
+      ),
+      'suggestions.approve': BundleEntry(value: 'Approve', plural: 'none'),
+      'suggestions.reject': BundleEntry(value: 'Reject', plural: 'none'),
+      'suggestions.no_pending': BundleEntry(
+        value: 'No suggestions waiting for review.',
         plural: 'none',
       ),
       'sources.title': BundleEntry(value: 'Sources', plural: 'none'),

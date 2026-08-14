@@ -138,9 +138,60 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
             _SubmissionCard(suggestion: suggestion, i18n: i18n),
             const SizedBox(height: AppSpacing.xs),
           ],
+
+        // Moderator review queue (Phase 23): only for reviewers.
+        if (controller.isModerator) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  i18n.t(StringKeys.suggestionsReviewQueue),
+                  style: AppTypography.titleMedium,
+                ),
+              ),
+              IconButton(
+                tooltip: i18n.t(StringKeys.commonRetry),
+                icon: const Icon(Icons.refresh),
+                onPressed: controller.busy
+                    ? null
+                    : () => controller.refreshPending(),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          if (controller.pending.isEmpty)
+            StatusPill(label: i18n.t(StringKeys.suggestionsNoPending))
+          else
+            for (final suggestion in controller.pending) ...[
+              _ReviewCard(
+                suggestion: suggestion,
+                i18n: i18n,
+                busy: controller.busy,
+                onReview: (approved) =>
+                    _review(context, controller, suggestion, approved),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+            ],
+        ],
         const SizedBox(height: AppSpacing.md),
       ],
     );
+  }
+
+  /// Approve/reject a pending suggestion and surface failures.
+  Future<void> _review(
+    BuildContext context,
+    SuggestionsController controller,
+    TranslationSuggestion suggestion,
+    bool approved,
+  ) async {
+    final ok = await controller.review(suggestion.id, approved: approved);
+    if (!ok && controller.error != null && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(controller.error!)));
+    }
   }
 
   void _showProposeDialog(BuildContext context, MissingKey key) {
@@ -280,6 +331,71 @@ class _SubmissionCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         trailing: StatusPill(label: label, state: state),
+      ),
+    );
+  }
+}
+
+/// One pending suggestion with moderator approve/reject actions.
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({
+    required this.suggestion,
+    required this.i18n,
+    required this.busy,
+    required this.onReview,
+  });
+
+  final TranslationSuggestion suggestion;
+  final I18nController i18n;
+  final bool busy;
+
+  /// Called with `true` to approve, `false` to reject.
+  final ValueChanged<bool> onReview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.translate, color: AppColors.primary),
+        title: Text(suggestion.fullKey, style: AppTypography.titleMedium),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              suggestion.value,
+              style: AppTypography.bodyMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              '${suggestion.locale} · ${suggestion.suggestedBy ?? '-'}',
+              style: AppTypography.labelMedium,
+            ),
+          ],
+        ),
+        trailing: busy
+            ? const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: i18n.t(StringKeys.suggestionsApprove),
+                    icon: const Icon(Icons.check_circle_outline),
+                    color: AppColors.success,
+                    onPressed: () => onReview(true),
+                  ),
+                  IconButton(
+                    tooltip: i18n.t(StringKeys.suggestionsReject),
+                    icon: const Icon(Icons.cancel_outlined),
+                    color: AppColors.danger,
+                    onPressed: () => onReview(false),
+                  ),
+                ],
+              ),
       ),
     );
   }

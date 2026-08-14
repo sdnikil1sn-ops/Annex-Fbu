@@ -255,4 +255,34 @@ void main() {
     expect(find.text('Your rating'), findsOneWidget);
     expect(find.byIcon(Icons.star), findsWidgets);
   });
+
+  testWidgets('moderators see and clear the translation review queue', (
+    tester,
+  ) async {
+    final services = _buildServices();
+    addTearDown(services.authController.dispose);
+    addTearDown(services.i18n.dispose);
+    addTearDown(services.settings.dispose);
+    await services.i18n.load();
+    await services.authController.signInAnonymously();
+
+    await tester.binding.setSurfaceSize(const Size(480, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_wrap(services));
+    await tester.pumpAndSettle();
+
+    // The mock profile is a moderator, so the Contribute tab shows the
+    // review queue with two seeded pending suggestions.
+    await tester.tap(find.text('Contribute'));
+    await tester.pumpAndSettle();
+    expect(find.text('Review queue'), findsOneWidget);
+    expect(find.text('lessons.complete'), findsOneWidget);
+    expect(find.text('common.retry'), findsOneWidget);
+
+    // Approve one suggestion; it leaves the queue.
+    await tester.tap(find.byIcon(Icons.check_circle_outline).first);
+    await tester.pumpAndSettle();
+    expect(find.text('lessons.complete'), findsNothing);
+    expect(find.text('common.retry'), findsOneWidget);
+  });
 }

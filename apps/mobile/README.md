@@ -58,6 +58,9 @@ mobile/
   community signal side by side, and rate a source 1–5 (one voice per
   user) as a fifth bottom tab (the tab bar is scrollable to fit six
   destinations).
+- **Phase 23 (done):** moderator review queue surfaced — reviewers see
+  pending translation suggestions with approve/reject actions inside the
+  Contribute tab (role hydrated from `/users/me`).
 
 ## Implemented (Phase 9 → 12)
 

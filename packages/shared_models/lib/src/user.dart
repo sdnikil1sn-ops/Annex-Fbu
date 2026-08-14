@@ -30,6 +30,9 @@ class UserProfile {
 
   bool get isAdmin => role == 'admin';
 
+  /// Whether the caller may run the moderator review queue.
+  bool get isModerator => role == 'moderator' || role == 'admin';
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     final email = json['email'];

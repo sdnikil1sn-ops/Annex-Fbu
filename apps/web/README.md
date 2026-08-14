@@ -63,6 +63,9 @@ platform-specific shell, theming, and entry-point code.
   publishers/domains, open a profile with the model score and the
   community signal side by side, and rate a source 1–5 (one voice per
   user) as a rail/nav destination.
+- **Phase 23 (done):** moderator review queue surfaced — reviewers see
+  pending translation suggestions with approve/reject actions inside the
+  Contribute destination (role hydrated from `/users/me`).
 
 Run it: `flutter run -d chrome` (debug builds use the mock API; point at the real
 backend with `--dart-define=ANNEX_API_URL=... --dart-define=ANNEX_USE_MOCK=false`).

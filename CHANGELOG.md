@@ -622,6 +622,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     search → profile → rate flow, and the source model round-trip suite
     (42 shared_models + 51 shared_features + 15 app widget tests).
 
+- **Moderator review queue in the Flutter apps — web + mobile
+  (Phase 23).**
+  - The Phase 18 review flow ships to clients: the `AnalysisApi` gains
+    `fetchMyProfile` (`GET /users/me`, hydrating the caller's RBAC role),
+    `fetchPendingSuggestions` and `reviewSuggestion` (the moderator-gated
+    queue endpoints). `UserProfile` gains `isModerator`
+    (`moderator` or `admin`).
+  - `SuggestionsController` now hydrates the profile on load (best-effort
+    — anonymous callers just see no queue) and, for moderators, fetches
+    the pending queue; `review(id, approved:)` approves or rejects and
+    removes the suggestion from the queue, and `refreshPending` reloads
+    after external changes. The mock seeds two pending suggestions and a
+    moderator profile so the flow is testable end to end.
+  - `SuggestionsScreen` renders a review-queue section for moderators:
+    each pending suggestion shows its value plus locale/contributor, with
+    approve/reject actions and an empty state.
+  - `packages/shared_utils`: new `suggestions.review_queue` /
+    `approve` / `reject` / `no_pending` StringKeys plus a backend i18n
+    seed migration (`20260815000005_review_i18n.sql`, en + pt).
+  - Tests: controller unit tests (profile hydration, approve/reject
+    queue mutation, refresh, review failure), web/mobile widget tests
+    covering a moderator clearing the queue, and the existing suites
+    (42 shared_models + 56 shared_features + 17 app widget tests).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -666,6 +690,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   labels.
 - `apps/web/README.md` and `apps/mobile/README.md` updated with the
   Phase 22 source-registry status.
+- `apps/web/README.md` and `apps/mobile/README.md` updated with the
+  Phase 23 moderator review-queue status.
 
 ### Deprecated
 

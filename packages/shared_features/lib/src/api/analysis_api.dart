@@ -114,6 +114,16 @@ abstract interface class AnalysisApi {
   /// Rate a source's credibility (1–5), updating the community signal;
   /// re-rating replaces the caller's own rating (one voice per user).
   Future<Source> rateSource(String domain, int rating);
+
+  /// The authenticated caller's hydrated profile (role, locale).
+  Future<UserProfile> fetchMyProfile();
+
+  /// The moderator review queue, oldest first (moderator/admin only).
+  Future<List<TranslationSuggestion>> fetchPendingSuggestions({int limit = 50});
+
+  /// Approve or reject a pending suggestion (moderator/admin only);
+  /// approval publishes the value into the live bundles.
+  Future<TranslationSuggestion> reviewSuggestion(String id, bool approved);
 }
 
 /// HTTP implementation against the v1 backend API.
@@ -416,6 +426,44 @@ class HttpAnalysisApi implements AnalysisApi {
       'rating': rating,
     });
     return Source.fromJson(_dataMap(json, 'sources'));
+  }
+
+  @override
+  Future<UserProfile> fetchMyProfile() async {
+    final json = await _get('/users/me');
+    return UserProfile.fromJson(_dataMap(json, 'users'));
+  }
+
+  @override
+  Future<List<TranslationSuggestion>> fetchPendingSuggestions({
+    int limit = 50,
+  }) async {
+    final json = await _get('/i18n/suggestions/pending?limit=$limit');
+    final data = json['data'];
+    if (data is! List) {
+      throw const ApiException(
+        'i18n.invalid_response',
+        'Malformed pending suggestions response',
+      );
+    }
+    return data
+        .map(
+          (item) => TranslationSuggestion.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<TranslationSuggestion> reviewSuggestion(
+    String id,
+    bool approved,
+  ) async {
+    final json = await _post('/i18n/suggestions/$id/review', {
+      'approved': approved,
+    });
+    return TranslationSuggestion.fromJson(_dataMap(json, 'i18n'));
   }
 
   Map<String, dynamic> _dataMap(Map<String, dynamic> json, String prefix) {
