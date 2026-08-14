@@ -59,6 +59,10 @@ platform-specific shell, theming, and entry-point code.
   flow (untranslated keys for the active locale, propose dialog, own
   submissions with status) ships from `shared_features` as a
   rail/nav destination.
+- **Phase 22 (done):** source credibility registry surfaced — search
+  publishers/domains, open a profile with the model score and the
+  community signal side by side, and rate a source 1–5 (one voice per
+  user) as a rail/nav destination.
 
 Run it: `flutter run -d chrome` (debug builds use the mock API; point at the real
 backend with `--dart-define=ANNEX_API_URL=... --dart-define=ANNEX_USE_MOCK=false`).

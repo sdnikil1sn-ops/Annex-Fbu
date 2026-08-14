@@ -98,6 +98,23 @@ abstract final class StringKeys {
   static const suggestionsLocale = 'suggestions.locale';
   static const suggestionsContributorNote = 'suggestions.contributor_note';
 
+  // sources (Phase 14/19/22)
+  static const sourcesTitle = 'sources.title';
+  static const sourcesSearchHint = 'sources.search_hint';
+  static const sourcesSearch = 'sources.search';
+  static const sourcesModelScore = 'sources.model_score';
+  static const sourcesCommunity = 'sources.community';
+  static const sourcesRate = 'sources.rate';
+  static const sourcesYourRating = 'sources.your_rating';
+  static const sourcesNoResults = 'sources.no_results';
+  static const sourcesError = 'sources.error';
+  static const sourcesTrustSignals = 'sources.trust_signals';
+  static const sourcesRatingsCount = 'sources.ratings_count';
+  static const sourcesAverage = 'sources.average';
+  static const sourcesScoreLabel = 'sources.score_label';
+  static const sourcesCommunityEmpty = 'sources.community_empty';
+  static const sourcesOpenProfile = 'sources.open_profile';
+
   // settings
   static const settingsTitle = 'settings.title';
   static const settingsLanguage = 'settings.language';
@@ -186,6 +203,21 @@ abstract final class StringKeys {
     suggestionsSubmitted,
     suggestionsLocale,
     suggestionsContributorNote,
+    sourcesTitle,
+    sourcesSearchHint,
+    sourcesSearch,
+    sourcesModelScore,
+    sourcesCommunity,
+    sourcesRate,
+    sourcesYourRating,
+    sourcesNoResults,
+    sourcesError,
+    sourcesTrustSignals,
+    sourcesRatingsCount,
+    sourcesAverage,
+    sourcesScoreLabel,
+    sourcesCommunityEmpty,
+    sourcesOpenProfile,
     settingsTitle,
     settingsLanguage,
     settingsTheme,

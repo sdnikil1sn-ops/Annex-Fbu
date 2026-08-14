@@ -22,6 +22,7 @@ void main() {
             'lessons',
             'classes',
             'suggestions',
+            'sources',
             'settings'
           }));
     });

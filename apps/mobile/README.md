@@ -53,6 +53,11 @@ mobile/
   flow (untranslated keys for the active locale, propose dialog, own
   submissions with status) ships from `shared_features` as a fourth
   bottom tab.
+- **Phase 22 (done):** source credibility registry surfaced — search
+  publishers/domains, open a profile with the model score and the
+  community signal side by side, and rate a source 1–5 (one voice per
+  user) as a fifth bottom tab (the tab bar is scrollable to fit six
+  destinations).
 
 ## Implemented (Phase 9 → 12)
 

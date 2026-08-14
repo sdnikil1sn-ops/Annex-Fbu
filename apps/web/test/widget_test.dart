@@ -220,4 +220,39 @@ void main() {
     expect(find.text('Tentar novamente'), findsWidgets);
     expect(find.text('Em análise'), findsOneWidget);
   });
+
+  testWidgets('sources tab searches and rates a source', (tester) async {
+    final services = _buildServices();
+    addTearDown(services.authController.dispose);
+    addTearDown(services.i18n.dispose);
+    addTearDown(services.settings.dispose);
+    await services.i18n.load();
+    await services.authController.signInAnonymously();
+
+    await tester.binding.setSurfaceSize(const Size(480, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_wrap(services));
+    await tester.pumpAndSettle();
+
+    // Switch to the Sources tab and search the seeded registry.
+    await tester.tap(find.text('Sources'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'snopes');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Snopes'), findsOneWidget);
+
+    // Open the profile: the model score and community signal render.
+    await tester.tap(find.text('Snopes'));
+    await tester.pumpAndSettle();
+    expect(find.text('snopes.com'), findsOneWidget);
+    expect(find.text('Model score'), findsOneWidget);
+    expect(find.text('95%'), findsWidgets);
+
+    // Rate the source and verify the caller's rating appears.
+    await tester.tap(find.byIcon(Icons.star_border).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Your rating'), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsWidgets);
+  });
 }

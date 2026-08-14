@@ -14,6 +14,7 @@ import '../features/auth/auth_controller.dart';
 import '../features/classes/classes_controller.dart';
 import '../features/lessons/lessons_controller.dart';
 import '../features/settings/settings_controller.dart';
+import '../features/sources/sources_controller.dart';
 import '../features/suggestions/suggestions_controller.dart';
 import '../i18n/i18n_controller.dart';
 
@@ -43,6 +44,9 @@ class AppServices {
   /// A fresh suggestions controller bound to the app's API.
   SuggestionsController suggestionsController() =>
       SuggestionsController(api: api);
+
+  /// A fresh sources controller bound to the app's API.
+  SourcesController sourcesController() => SourcesController(api: api);
 }
 
 /// Inherited widget exposing [AppServices] to the widget tree.

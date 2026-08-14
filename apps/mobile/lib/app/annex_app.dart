@@ -57,6 +57,9 @@ class _Root extends StatelessWidget {
         ChangeNotifierProvider<SuggestionsController>(
           create: (_) => services.suggestionsController(),
         ),
+        ChangeNotifierProvider<SourcesController>(
+          create: (_) => services.sourcesController(),
+        ),
       ],
       child: const _MainShell(),
     );
@@ -71,7 +74,7 @@ class _MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final i18n = AppScope.of(context).i18n;
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         body: const TabBarView(
           children: [
@@ -79,10 +82,13 @@ class _MainShell extends StatelessWidget {
             LessonsScreen(),
             ClassesScreen(),
             SuggestionsScreen(),
+            SourcesScreen(),
             SettingsScreen(),
           ],
         ),
         bottomNavigationBar: TabBar(
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
             Tab(
               icon: const Icon(Icons.analytics_outlined),
@@ -99,6 +105,10 @@ class _MainShell extends StatelessWidget {
             Tab(
               icon: const Icon(Icons.translate_outlined),
               text: i18n.t(StringKeys.suggestionsTitle),
+            ),
+            Tab(
+              icon: const Icon(Icons.public_outlined),
+              text: i18n.t(StringKeys.sourcesTitle),
             ),
             Tab(
               icon: const Icon(Icons.settings_outlined),

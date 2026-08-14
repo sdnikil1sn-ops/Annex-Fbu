@@ -103,11 +103,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Why misinformation spreads'), findsOneWidget);
 
-    // The completion button sits below the fold on small viewports.
+    // The completion button sits below the fold on small viewports. The
+    // mobile shell's scrollable TabBar adds extra Scrollables, so scope
+    // the search to the lessons screen.
+    final lessonsScrollable = find.descendant(
+      of: find.byType(LessonsScreen),
+      matching: find.byType(Scrollable),
+    );
     await tester.scrollUntilVisible(
       find.text('Mark complete'),
       100,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: lessonsScrollable,
     );
     await tester.tap(find.text('Mark complete'));
     await tester.pumpAndSettle();
@@ -178,5 +184,37 @@ void main() {
 
     expect(find.text('Tentar novamente'), findsWidgets);
     expect(find.text('Em análise'), findsOneWidget);
+  });
+
+  testWidgets('sources tab searches and rates a source', (tester) async {
+    final services = _buildServices();
+    addTearDown(services.authController.dispose);
+    addTearDown(services.i18n.dispose);
+    addTearDown(services.settings.dispose);
+    await services.i18n.load();
+    await services.authController.signInAnonymously();
+
+    await tester.pumpWidget(_wrap(services));
+    await tester.pumpAndSettle();
+
+    // Switch to the Sources tab and search the seeded registry.
+    await tester.tap(find.text('Sources'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'snopes');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Snopes'), findsOneWidget);
+
+    // Open the profile: the model score and community signal render.
+    await tester.tap(find.text('Snopes'));
+    await tester.pumpAndSettle();
+    expect(find.text('snopes.com'), findsOneWidget);
+    expect(find.text('Model score'), findsOneWidget);
+
+    // Rate the source and verify the caller's rating appears.
+    await tester.tap(find.byIcon(Icons.star_border).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Your rating'), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsWidgets);
   });
 }

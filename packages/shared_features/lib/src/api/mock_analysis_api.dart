@@ -21,6 +21,7 @@ class MockAnalysisApi implements AnalysisApi {
     this.delay = const Duration(milliseconds: 10),
   }) {
     _seedClass();
+    _seedSources();
   }
 
   /// Substring that makes submitted text fail analysis.
@@ -50,6 +51,11 @@ class MockAnalysisApi implements AnalysisApi {
   // by (locale, key) so re-submission updates the existing pending row.
   final Map<String, TranslationSuggestion> _mySuggestions = {};
   int _nextSuggestionId = 1;
+
+  // Source registry state (Phase 22): the Phase 14 seed publishers plus
+  // per-user community ratings (one voice per user per source).
+  final Map<String, Source> _sourcesByDomain = {};
+  final Map<String, Map<String, int>> _ratingsByDomain = {};
 
   /// Whether the last submission was recorded (test hook).
   String? lastSubmittedText;
@@ -176,8 +182,8 @@ class MockAnalysisApi implements AnalysisApi {
 
   // --- lesson internals --------------------------------------------------
 
-  static final List<Lesson> _seed = [
-    const Lesson(
+  static const List<Lesson> _seed = [
+    Lesson(
       id: '00000000-0000-4000-8000-000000000001',
       slug: 'spotting-misinformation',
       difficulty: 'beginner',
@@ -185,7 +191,7 @@ class MockAnalysisApi implements AnalysisApi {
       estimatedMinutes: 5,
       orderIndex: 1,
     ),
-    const Lesson(
+    Lesson(
       id: '00000000-0000-4000-8000-000000000002',
       slug: 'understanding-credibility-scores',
       difficulty: 'intermediate',
@@ -430,6 +436,98 @@ class MockAnalysisApi implements AnalysisApi {
     _classes.removeWhere((c) => c.id == classId);
     _membersByClass.remove(classId);
     _assignmentsByClass.remove(classId);
+  }
+
+  @override
+  Future<List<Source>> searchSources(String query, {int limit = 20}) async {
+    await Future<void>.delayed(delay);
+    final needle = query.toLowerCase();
+    final matches = _sourcesByDomain.values
+        .where(
+          (source) =>
+              source.domain.toLowerCase().contains(needle) ||
+              (source.name?.toLowerCase().contains(needle) ?? false),
+        )
+        .take(limit)
+        .toList();
+    return List.unmodifiable(matches);
+  }
+
+  @override
+  Future<Source> fetchSource(String domain) async {
+    await Future<void>.delayed(delay);
+    final source = _sourcesByDomain[domain.toLowerCase()];
+    if (source == null) {
+      throw const ApiException('source.not_found', 'Source not found');
+    }
+    return _withCommunity(source);
+  }
+
+  @override
+  Future<Source> rateSource(String domain, int rating) async {
+    await Future<void>.delayed(delay);
+    final source = _sourcesByDomain[domain.toLowerCase()];
+    if (source == null) {
+      throw const ApiException('source.not_found', 'Source not found');
+    }
+    // One voice per user: re-rating replaces the mock caller's rating.
+    _ratingsByDomain.putIfAbsent(source.domain, () => {})['mock-user'] = rating;
+    return _withCommunity(source);
+  }
+
+  // --- source internals --------------------------------------------------
+
+  void _seedSources() {
+    const seed = [
+      _SeedSource('reuters.com', 'Reuters', 'news', 0.92),
+      _SeedSource('apnews.com', 'AP News', 'news', 0.91),
+      _SeedSource('bbc.com', 'BBC', 'news', 0.89),
+      _SeedSource('theguardian.com', 'The Guardian', 'news', 0.84),
+      _SeedSource('snopes.com', 'Snopes', 'fact_check', 0.95),
+      _SeedSource('conspiracy-news.net', 'Conspiracy News', 'blog', 0.18),
+      _SeedSource('fakeheadlines.xyz', 'Fake Headlines', 'satire', 0.05),
+    ];
+    for (var index = 0; index < seed.length; index++) {
+      final item = seed[index];
+      _sourcesByDomain[item.domain] = Source(
+        id: 'src-${index + 1}',
+        domain: item.domain,
+        name: item.name,
+        category: item.category,
+        score: item.score,
+        signals: const {'editorial_standards': 'high'},
+        model: 'seed-v1',
+        computedAt: DateTime.utc(2026, 8, 12),
+      );
+    }
+    // A couple of pre-seeded community ratings so aggregates render.
+    _ratingsByDomain['snopes.com'] = {'alice': 5, 'bob': 4};
+    _ratingsByDomain['reuters.com'] = {'alice': 5};
+  }
+
+  Source _withCommunity(Source source) {
+    final ratings = _ratingsByDomain[source.domain] ?? const <String, int>{};
+    final count = ratings.length;
+    final average = count == 0
+        ? null
+        : ratings.values.reduce((a, b) => a + b) / count;
+    return Source(
+      id: source.id,
+      domain: source.domain,
+      name: source.name,
+      country: source.country,
+      language: source.language,
+      category: source.category,
+      score: source.score,
+      signals: source.signals,
+      model: source.model,
+      computedAt: source.computedAt,
+      community: SourceCommunity(
+        count: count,
+        average: average,
+        myRating: ratings['mock-user'],
+      ),
+    );
   }
 
   // --- class internals --------------------------------------------------
@@ -753,6 +851,45 @@ class MockAnalysisApi implements AnalysisApi {
         value: 'Help translate ANNEX into your language.',
         plural: 'none',
       ),
+      'sources.title': BundleEntry(value: 'Sources', plural: 'none'),
+      'sources.search_hint': BundleEntry(
+        value: 'Search publishers or domains…',
+        plural: 'none',
+      ),
+      'sources.search': BundleEntry(value: 'Search', plural: 'none'),
+      'sources.model_score': BundleEntry(value: 'Model score', plural: 'none'),
+      'sources.community': BundleEntry(value: 'Community', plural: 'none'),
+      'sources.rate': BundleEntry(value: 'Rate this source', plural: 'none'),
+      'sources.your_rating': BundleEntry(value: 'Your rating', plural: 'none'),
+      'sources.no_results': BundleEntry(
+        value: 'No sources found.',
+        plural: 'none',
+      ),
+      'sources.error': BundleEntry(
+        value: 'Could not load sources.',
+        plural: 'none',
+      ),
+      'sources.trust_signals': BundleEntry(
+        value: 'Trust signals',
+        plural: 'none',
+      ),
+      'sources.ratings_count': BundleEntry(
+        value: '{count} ratings',
+        plural: 'other',
+      ),
+      'sources.average': BundleEntry(value: '{average} avg', plural: 'other'),
+      'sources.score_label': BundleEntry(
+        value: 'Credibility score',
+        plural: 'none',
+      ),
+      'sources.community_empty': BundleEntry(
+        value: 'No community ratings yet.',
+        plural: 'none',
+      ),
+      'sources.open_profile': BundleEntry(
+        value: 'View profile',
+        plural: 'none',
+      ),
       'auth.sign_in': BundleEntry(value: 'Sign in', plural: 'none'),
       'auth.sign_out': BundleEntry(value: 'Sign out', plural: 'none'),
       'auth.continue_guest': BundleEntry(
@@ -835,4 +972,14 @@ class _LessonContent {
   final String title;
   final String summary;
   final List<LessonSection> sections;
+}
+
+/// One seeded publisher (mirrors the Phase 14 source seed migration).
+class _SeedSource {
+  const _SeedSource(this.domain, this.name, this.category, this.score);
+
+  final String domain;
+  final String name;
+  final String category;
+  final double score;
 }

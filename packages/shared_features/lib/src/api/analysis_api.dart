@@ -103,6 +103,17 @@ abstract interface class AnalysisApi {
 
   /// The caller's submissions, newest first (optional status filter).
   Future<List<TranslationSuggestion>> fetchMySuggestions({String? status});
+
+  /// Search sources by domain or name (case-insensitive substring).
+  Future<List<Source>> searchSources(String query, {int limit = 20});
+
+  /// One source profile with its credibility score and the community
+  /// aggregate (public; carries the caller's rating when authenticated).
+  Future<Source> fetchSource(String domain);
+
+  /// Rate a source's credibility (1–5), updating the community signal;
+  /// re-rating replaces the caller's own rating (one voice per user).
+  Future<Source> rateSource(String domain, int rating);
 }
 
 /// HTTP implementation against the v1 backend API.
@@ -375,6 +386,36 @@ class HttpAnalysisApi implements AnalysisApi {
           ),
         )
         .toList();
+  }
+
+  @override
+  Future<List<Source>> searchSources(String query, {int limit = 20}) async {
+    final encoded = Uri.encodeQueryComponent(query);
+    final json = await _get('/sources/search?q=$encoded&limit=$limit');
+    final data = json['data'];
+    if (data is! List) {
+      throw const ApiException(
+        'sources.invalid_response',
+        'Malformed sources response',
+      );
+    }
+    return data
+        .map((item) => Source.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
+  Future<Source> fetchSource(String domain) async {
+    final json = await _get('/sources/${Uri.encodeComponent(domain)}');
+    return Source.fromJson(_dataMap(json, 'sources'));
+  }
+
+  @override
+  Future<Source> rateSource(String domain, int rating) async {
+    final json = await _post('/sources/${Uri.encodeComponent(domain)}/rate', {
+      'rating': rating,
+    });
+    return Source.fromJson(_dataMap(json, 'sources'));
   }
 
   Map<String, dynamic> _dataMap(Map<String, dynamic> json, String prefix) {

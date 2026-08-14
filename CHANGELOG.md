@@ -592,6 +592,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     flow in pt, and the suggestion model round-trip suite (38
     shared_models + 41 shared_features + 13 app widget tests).
 
+- **Source credibility registry in the Flutter apps — web + mobile
+  (Phase 22).**
+  - `packages/shared_models`: new `Source` / `SourceCommunity` models
+    mirroring the Phase 14/19 backend contract (domain, name, category,
+    model credibility score + trust signals, and the community
+    aggregate: count, average, caller's rating), with strict JSON
+    round-trip tests.
+  - `packages/shared_utils`: new typed `StringKeys` for the registry
+    chrome (tab title, search, model score vs community labels, rating
+    control, trust signals) plus a backend i18n seed migration
+    (`20260815000004_sources_i18n.sql`) so the UI strings localize
+    through the runtime bundles (ADR-0007, en + pt subset).
+  - `packages/shared_features`: the `AnalysisApi` interface gains
+    searchSources/fetchSource/rateSource (HTTP + mock — the mock seeds
+    the Phase 14 publisher set with pre-seeded community ratings); a new
+    `SourcesController` drives search, profile reads, and rating
+    (one voice per user); a new `SourcesScreen` renders the search box,
+    results with score + rating count, and a profile with the model
+    `ScoreMeter` beside the community column (average + count), a 1–5
+    star rating control, and the trust signals behind the score.
+  - App shells: the web `WebShell` gains a Sources destination (rail +
+    bottom nav) and the mobile `_MainShell` a fifth tab — the mobile
+    bottom `TabBar` becomes scrollable so six destinations fit narrow
+    screens.
+  - Tests: controller unit tests (substring search by domain/name,
+    profile aggregate, one-voice-per-user rating, re-rating, empty
+    community, failure paths), web/mobile widget tests covering the full
+    search → profile → rate flow, and the source model round-trip suite
+    (42 shared_models + 51 shared_features + 15 app widget tests).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -634,6 +664,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `apps/web/README.md` and `apps/mobile/README.md` updated with the
   Phase 21 community-translations status; `StatusPill` ellipsizes long
   labels.
+- `apps/web/README.md` and `apps/mobile/README.md` updated with the
+  Phase 22 source-registry status.
 
 ### Deprecated
 
