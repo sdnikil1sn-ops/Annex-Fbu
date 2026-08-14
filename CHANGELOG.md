@@ -556,6 +556,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     round-trip suite (33 shared_models + 35 shared_features + 11 app
     widget tests).
 
+- **Community-contributed translations in the Flutter apps — web +
+  mobile (Phase 21).**
+  - `packages/shared_models`: new `MissingKey` / `TranslationSuggestion`
+    models mirroring the Phase 18 backend contract (untranslated keys
+    with their English source; submissions with review status), with
+    strict JSON round-trip tests.
+  - `packages/shared_utils`: new typed `StringKeys` for the contributor
+    chrome (tab title, missing/your-submissions headings, propose
+    dialog, review status names) plus a backend i18n seed migration
+    (`20260815000003_suggestions_i18n.sql`) so the UI strings localize
+    through the runtime bundles (ADR-0007, en + pt subset).
+  - `packages/shared_features`: the `AnalysisApi` interface gains
+    fetchMissingKeys/submitSuggestion/fetchMySuggestions (HTTP + mock —
+    the mock serves a pt gap set mirroring the seed migration, so the
+    default locale shows a complete state); a new `SuggestionsController`
+    drives the missing list, submission (idempotent per user/locale/key,
+    removing the proposed key from the missing list), and own-submission
+    reads; a new `SuggestionsScreen` renders the untranslated keys for
+    the active locale with a propose dialog (English source + input),
+    and the caller's submissions with status pills.
+  - App shells: the web `WebShell` gains a Contribute destination (rail
+    + bottom nav) and the mobile `_MainShell` a fourth tab; both wire a
+    `SuggestionsController` provider and prefetch per app instance
+    (reloading on locale change).
+  - Fix: dialog action buttons that read feature providers from inside
+    the dialog's context now capture the controller from the screen's
+    context first — dialog routes live under the root navigator, outside
+    the feature providers (applies to the Phase 20 classes dialogs too).
+    `StatusPill` labels now ellipsize under tight constraints so long
+    localized text cannot overflow narrow tiles.
+  - Tests: controller unit tests (missing derivation, en complete state,
+    submit removes the key, re-submission updates, failure paths),
+    web/mobile widget tests covering the full browse → propose → submit
+    flow in pt, and the suggestion model round-trip suite (38
+    shared_models + 41 shared_features + 13 app widget tests).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -595,6 +631,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   OpenAPI contract regenerated.
 - `apps/web/README.md` and `apps/mobile/README.md` updated with the
   Phase 20 educator-tools status.
+- `apps/web/README.md` and `apps/mobile/README.md` updated with the
+  Phase 21 community-translations status; `StatusPill` ellipsizes long
+  labels.
 
 ### Deprecated
 

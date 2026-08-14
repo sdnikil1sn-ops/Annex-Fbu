@@ -9,7 +9,7 @@ image forensics, and source credibility scoring with structured media-literacy e
 
 | | |
 |---|---|
-| **Status** | Phases 1–20 complete — in active development (see [CHANGELOG](./CHANGELOG.md)) |
+| **Status** | Phases 1–21 complete — in active development (see [CHANGELOG](./CHANGELOG.md)) |
 | **License** | [Apache-2.0](./LICENSE) |
 | **Version** | 0.1.0 (see [CHANGELOG](./CHANGELOG.md)) |
 | **Platforms** | Android · iOS · Web · Windows · Linux · macOS · Browser extensions |

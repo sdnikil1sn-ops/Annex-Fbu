@@ -139,4 +139,44 @@ void main() {
     expect(find.text('Ms. Alvarez'), findsOneWidget);
     expect(find.text('Student One'), findsOneWidget);
   });
+
+  testWidgets('suggestions tab proposes a translation for the locale', (
+    tester,
+  ) async {
+    final services = _buildServices();
+    // The mock serves untranslated keys only for pt; the default locale
+    // (en) is complete by definition.
+    final i18n = I18nController(api: services.api, locale: 'pt');
+    final settings = SettingsController(i18n: i18n);
+    final servicesPt = AppServices(
+      api: services.api,
+      authController: services.authController,
+      i18n: i18n,
+      settings: settings,
+    );
+    addTearDown(services.authController.dispose);
+    addTearDown(i18n.dispose);
+    addTearDown(settings.dispose);
+    await i18n.load();
+    await servicesPt.authController.signInAnonymously();
+
+    await tester.pumpWidget(_wrap(servicesPt));
+    await tester.pumpAndSettle();
+
+    // Switch to the Contribute tab and browse the missing keys.
+    await tester.tap(find.text('Contribuir'));
+    await tester.pumpAndSettle();
+    expect(find.text('common.retry'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+
+    // Propose a translation and verify it lands in the submissions list.
+    await tester.tap(find.text('Propor tradução').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Tentar novamente');
+    await tester.tap(find.text('Propor tradução').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tentar novamente'), findsWidgets);
+    expect(find.text('Em análise'), findsOneWidget);
+  });
 }

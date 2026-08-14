@@ -21,6 +21,7 @@ void main() {
             'errors',
             'lessons',
             'classes',
+            'suggestions',
             'settings'
           }));
     });

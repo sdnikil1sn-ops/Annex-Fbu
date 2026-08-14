@@ -83,6 +83,26 @@ abstract interface class AnalysisApi {
 
   /// Delete a class and its members/assignments (owner only).
   Future<void> deleteClass(String classId);
+
+  /// Keys the default locale defines that [locale] has not translated
+  /// (public, like the bundle endpoints).
+  Future<List<MissingKey>> fetchMissingKeys(
+    String locale, {
+    String defaultLocale = 'en',
+  });
+
+  /// Submit a translation proposal for an enabled locale; the caller
+  /// becomes its author and the suggestion starts pending.
+  Future<TranslationSuggestion> submitSuggestion({
+    required String locale,
+    required String namespace,
+    required String key,
+    required String value,
+    String pluralRule = 'none',
+  });
+
+  /// The caller's submissions, newest first (optional status filter).
+  Future<List<TranslationSuggestion>> fetchMySuggestions({String? status});
 }
 
 /// HTTP implementation against the v1 backend API.
@@ -293,6 +313,68 @@ class HttpAnalysisApi implements AnalysisApi {
   @override
   Future<void> deleteClass(String classId) async {
     await _delete('/classes/$classId');
+  }
+
+  @override
+  Future<List<MissingKey>> fetchMissingKeys(
+    String locale, {
+    String defaultLocale = 'en',
+  }) async {
+    final json = await _get(
+      '/i18n/suggestions/missing?locale=$locale&default_locale=$defaultLocale',
+    );
+    final data = json['data'];
+    if (data is! List) {
+      throw const ApiException(
+        'i18n.invalid_response',
+        'Malformed missing-keys response',
+      );
+    }
+    return data
+        .map(
+          (item) => MissingKey.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+  }
+
+  @override
+  Future<TranslationSuggestion> submitSuggestion({
+    required String locale,
+    required String namespace,
+    required String key,
+    required String value,
+    String pluralRule = 'none',
+  }) async {
+    final json = await _post('/i18n/suggestions', {
+      'locale': locale,
+      'namespace': namespace,
+      'key': key,
+      'value': value,
+      'plural_rule': pluralRule,
+    });
+    return TranslationSuggestion.fromJson(_dataMap(json, 'i18n'));
+  }
+
+  @override
+  Future<List<TranslationSuggestion>> fetchMySuggestions({
+    String? status,
+  }) async {
+    final query = status == null ? '' : '?status=$status';
+    final json = await _get('/i18n/suggestions$query');
+    final data = json['data'];
+    if (data is! List) {
+      throw const ApiException(
+        'i18n.invalid_response',
+        'Malformed suggestions response',
+      );
+    }
+    return data
+        .map(
+          (item) => TranslationSuggestion.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
   }
 
   Map<String, dynamic> _dataMap(Map<String, dynamic> json, String prefix) {

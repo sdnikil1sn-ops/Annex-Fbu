@@ -607,6 +607,7 @@ class _SectionTitle extends StatelessWidget {
 
 void _showCreateDialog(BuildContext context) {
   final i18n = AppScope.of(context).i18n;
+  final controller = context.read<ClassesController>();
   final nameController = TextEditingController();
   final descriptionController = TextEditingController();
   showDialog<void>(
@@ -639,7 +640,6 @@ void _showCreateDialog(BuildContext context) {
         ),
         FilledButton(
           onPressed: () async {
-            final controller = dialogContext.read<ClassesController>();
             final name = nameController.text.trim();
             if (name.isEmpty) return;
             final ok = await controller.create(
@@ -668,6 +668,7 @@ void _showCreateDialog(BuildContext context) {
 
 void _showJoinDialog(BuildContext context) {
   final i18n = AppScope.of(context).i18n;
+  final controller = context.read<ClassesController>();
   final classIdController = TextEditingController();
   final codeController = TextEditingController();
   showDialog<void>(
@@ -705,7 +706,6 @@ void _showJoinDialog(BuildContext context) {
         ),
         FilledButton(
           onPressed: () async {
-            final controller = dialogContext.read<ClassesController>();
             final classId = classIdController.text.trim();
             final code = codeController.text.trim().toUpperCase();
             if (classId.isEmpty || code.isEmpty) return;
@@ -727,13 +727,19 @@ void _showJoinDialog(BuildContext context) {
 void _showAssignDialog(BuildContext context, ClassRoom room) {
   final i18n = AppScope.of(context).i18n;
   final lessons = context.read<LessonsController>();
+  final classes = context.read<ClassesController>();
   showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: Text(i18n.t(StringKeys.classesAssignLesson)),
       content: SizedBox(
         width: double.maxFinite,
-        child: _LessonPicker(lessons: lessons, i18n: i18n, room: room),
+        child: _LessonPicker(
+          lessons: lessons,
+          classes: classes,
+          i18n: i18n,
+          room: room,
+        ),
       ),
       actions: [
         TextButton(
@@ -749,11 +755,13 @@ void _showAssignDialog(BuildContext context, ClassRoom room) {
 class _LessonPicker extends StatefulWidget {
   const _LessonPicker({
     required this.lessons,
+    required this.classes,
     required this.i18n,
     required this.room,
   });
 
   final LessonsController lessons;
+  final ClassesController classes;
   final I18nController i18n;
   final ClassRoom room;
 
@@ -772,11 +780,22 @@ class _LessonPickerState extends State<_LessonPicker> {
         widget.lessons.load(widget.i18n.locale);
       });
     }
+    widget.lessons.addListener(_onLessonsChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.lessons.removeListener(_onLessonsChanged);
+    super.dispose();
+  }
+
+  void _onLessonsChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final lessons = context.watch<LessonsController>();
+    final lessons = widget.lessons;
     if (!lessons.hasLoaded) {
       return const Padding(
         padding: EdgeInsets.all(AppSpacing.md),
@@ -808,7 +827,7 @@ class _LessonPickerState extends State<_LessonPicker> {
                 ? null
                 : () async {
                     setState(() => _busy = true);
-                    final controller = context.read<ClassesController>();
+                    final controller = widget.classes;
                     final messenger = ScaffoldMessenger.of(context);
                     final navigator = Navigator.of(context);
                     final ok = await controller.assignLesson(lesson.slug);

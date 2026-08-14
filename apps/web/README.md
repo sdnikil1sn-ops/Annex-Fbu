@@ -55,6 +55,10 @@ platform-specific shell, theming, and entry-point code.
   (list with role + invite-code pills, create/join dialogs, roster,
   assignments with completion stats, teacher progress/delete actions)
   ships from `shared_features` as a rail/nav destination.
+- **Phase 21 (done):** community translations surfaced — the contributor
+  flow (untranslated keys for the active locale, propose dialog, own
+  submissions with status) ships from `shared_features` as a
+  rail/nav destination.
 
 Run it: `flutter run -d chrome` (debug builds use the mock API; point at the real
 backend with `--dart-define=ANNEX_API_URL=... --dart-define=ANNEX_USE_MOCK=false`).

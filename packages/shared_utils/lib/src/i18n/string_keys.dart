@@ -81,6 +81,23 @@ abstract final class StringKeys {
   static const classesJoinHint = 'classes.join_hint';
   static const classesCreateSuccess = 'classes.create_success';
 
+  // suggestions (Phase 18/21)
+  static const suggestionsTitle = 'suggestions.title';
+  static const suggestionsMissing = 'suggestions.missing';
+  static const suggestionsPropose = 'suggestions.propose';
+  static const suggestionsYourSubmissions = 'suggestions.your_submissions';
+  static const suggestionsEmpty = 'suggestions.empty';
+  static const suggestionsError = 'suggestions.error';
+  static const suggestionsNoSubmissions = 'suggestions.no_submissions';
+  static const suggestionsValue = 'suggestions.value';
+  static const suggestionsEnglish = 'suggestions.english';
+  static const suggestionsStatusPending = 'suggestions.status_pending';
+  static const suggestionsStatusApproved = 'suggestions.status_approved';
+  static const suggestionsStatusRejected = 'suggestions.status_rejected';
+  static const suggestionsSubmitted = 'suggestions.submitted';
+  static const suggestionsLocale = 'suggestions.locale';
+  static const suggestionsContributorNote = 'suggestions.contributor_note';
+
   // settings
   static const settingsTitle = 'settings.title';
   static const settingsLanguage = 'settings.language';
@@ -154,6 +171,21 @@ abstract final class StringKeys {
     classesClassId,
     classesJoinHint,
     classesCreateSuccess,
+    suggestionsTitle,
+    suggestionsMissing,
+    suggestionsPropose,
+    suggestionsYourSubmissions,
+    suggestionsEmpty,
+    suggestionsError,
+    suggestionsNoSubmissions,
+    suggestionsValue,
+    suggestionsEnglish,
+    suggestionsStatusPending,
+    suggestionsStatusApproved,
+    suggestionsStatusRejected,
+    suggestionsSubmitted,
+    suggestionsLocale,
+    suggestionsContributorNote,
     settingsTitle,
     settingsLanguage,
     settingsTheme,

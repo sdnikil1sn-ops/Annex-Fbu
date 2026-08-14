@@ -49,6 +49,10 @@ mobile/
   (list with role + invite-code pills, create/join dialogs, roster,
   assignments with completion stats, teacher progress/delete actions)
   ships from `shared_features` as a fourth bottom tab.
+- **Phase 21 (done):** community translations surfaced — the contributor
+  flow (untranslated keys for the active locale, propose dialog, own
+  submissions with status) ships from `shared_features` as a fourth
+  bottom tab.
 
 ## Implemented (Phase 9 → 12)
 

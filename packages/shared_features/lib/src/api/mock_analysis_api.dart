@@ -46,6 +46,11 @@ class MockAnalysisApi implements AnalysisApi {
   int _nextClassId = 1;
   int _nextAssignmentId = 1;
 
+  // Translation contribution state (Phase 21): submitted suggestions keyed
+  // by (locale, key) so re-submission updates the existing pending row.
+  final Map<String, TranslationSuggestion> _mySuggestions = {};
+  int _nextSuggestionId = 1;
+
   /// Whether the last submission was recorded (test hook).
   String? lastSubmittedText;
   String? lastSubmittedLocale;
@@ -495,6 +500,72 @@ class MockAnalysisApi implements AnalysisApi {
   }
 
   @override
+  Future<List<MissingKey>> fetchMissingKeys(
+    String locale, {
+    String defaultLocale = 'en',
+  }) async {
+    await Future<void>.delayed(delay);
+    // en is complete by definition; pt mirrors the seed migration's gaps
+    // (en keys the pt bundle does not define yet).
+    if (locale == 'pt') {
+      return const [
+        MissingKey(namespace: 'common', key: 'retry', englishValue: 'Retry'),
+        MissingKey(
+          namespace: 'lessons',
+          key: 'minutes',
+          englishValue: '{minutes} min',
+        ),
+        MissingKey(
+          namespace: 'classes',
+          key: 'completed_count',
+          englishValue: '{completed}/{total} completed',
+        ),
+        MissingKey(namespace: 'settings', key: 'theme', englishValue: 'Theme'),
+      ];
+    }
+    return const [];
+  }
+
+  @override
+  Future<TranslationSuggestion> submitSuggestion({
+    required String locale,
+    required String namespace,
+    required String key,
+    required String value,
+    String pluralRule = 'none',
+  }) async {
+    await Future<void>.delayed(delay);
+    // Idempotent per (locale, key): re-submission updates the pending row.
+    final existing = _mySuggestions['$locale:$key'];
+    final suggestion = TranslationSuggestion(
+      id:
+          existing?.id ??
+          's0000000-0000-4000-8000-0000000000${_nextSuggestionId++}',
+      locale: locale,
+      namespace: namespace,
+      key: key,
+      value: value,
+      pluralRule: pluralRule,
+      suggestedBy: 'mock-contributor',
+      status: 'pending',
+      createdAt: existing?.createdAt ?? DateTime.now().toUtc(),
+    );
+    _mySuggestions['$locale:$key'] = suggestion;
+    return suggestion;
+  }
+
+  @override
+  Future<List<TranslationSuggestion>> fetchMySuggestions({
+    String? status,
+  }) async {
+    await Future<void>.delayed(delay);
+    final all = _mySuggestions.values.toList()
+      ..sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
+    if (status == null) return List.unmodifiable(all);
+    return List.unmodifiable(all.where((s) => s.status == status));
+  }
+
+  @override
   Future<LocaleList> fetchLocales() async {
     return const LocaleList(
       defaultLocale: 'en',
@@ -631,6 +702,57 @@ class MockAnalysisApi implements AnalysisApi {
         value: 'Class created. Share the invite code with your students.',
         plural: 'none',
       ),
+      'suggestions.title': BundleEntry(value: 'Contribute', plural: 'none'),
+      'suggestions.missing': BundleEntry(
+        value: 'Untranslated keys',
+        plural: 'none',
+      ),
+      'suggestions.propose': BundleEntry(
+        value: 'Propose translation',
+        plural: 'none',
+      ),
+      'suggestions.your_submissions': BundleEntry(
+        value: 'Your submissions',
+        plural: 'none',
+      ),
+      'suggestions.empty': BundleEntry(
+        value: 'No untranslated keys — this language is complete.',
+        plural: 'none',
+      ),
+      'suggestions.error': BundleEntry(
+        value: 'Could not load translation suggestions.',
+        plural: 'none',
+      ),
+      'suggestions.no_submissions': BundleEntry(
+        value: 'You have not submitted any translations yet.',
+        plural: 'none',
+      ),
+      'suggestions.value': BundleEntry(
+        value: 'Your translation',
+        plural: 'none',
+      ),
+      'suggestions.english': BundleEntry(value: 'English', plural: 'none'),
+      'suggestions.status_pending': BundleEntry(
+        value: 'Pending review',
+        plural: 'none',
+      ),
+      'suggestions.status_approved': BundleEntry(
+        value: 'Approved',
+        plural: 'none',
+      ),
+      'suggestions.status_rejected': BundleEntry(
+        value: 'Rejected',
+        plural: 'none',
+      ),
+      'suggestions.submitted': BundleEntry(
+        value: 'Submitted for review.',
+        plural: 'none',
+      ),
+      'suggestions.locale': BundleEntry(value: 'Language', plural: 'none'),
+      'suggestions.contributor_note': BundleEntry(
+        value: 'Help translate ANNEX into your language.',
+        plural: 'none',
+      ),
       'auth.sign_in': BundleEntry(value: 'Sign in', plural: 'none'),
       'auth.sign_out': BundleEntry(value: 'Sign out', plural: 'none'),
       'auth.continue_guest': BundleEntry(
@@ -665,6 +787,26 @@ class MockAnalysisApi implements AnalysisApi {
             'common.cancel': BundleEntry(value: 'Cancelar', plural: 'none'),
             'analysis.submit': BundleEntry(value: 'Analisar', plural: 'none'),
             'analysis.summary': BundleEntry(value: 'Resumo', plural: 'none'),
+            'suggestions.title': BundleEntry(
+              value: 'Contribuir',
+              plural: 'none',
+            ),
+            'suggestions.missing': BundleEntry(
+              value: 'Chaves não traduzidas',
+              plural: 'none',
+            ),
+            'suggestions.propose': BundleEntry(
+              value: 'Propor tradução',
+              plural: 'none',
+            ),
+            'suggestions.your_submissions': BundleEntry(
+              value: 'Suas contribuições',
+              plural: 'none',
+            ),
+            'suggestions.status_pending': BundleEntry(
+              value: 'Em análise',
+              plural: 'none',
+            ),
           }
         : const <String, BundleEntry>{
             'common.cancel': BundleEntry(value: 'Cancelar', plural: 'none'),
