@@ -284,13 +284,17 @@ def create_app(
 
 def main() -> None:
     """Run the development server (console script ``annex-api``)."""
+    import os
+
     import uvicorn
 
     settings = get_settings()
+    # PaaS platforms (Cloud Run, Render, Heroku) inject PORT and require
+    # the process to listen on it; 8000 remains the local default.
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=int(os.environ.get("PORT", "8000")),
         reload=settings.app_env == "development",
         log_level=settings.log_level.lower(),
     )
