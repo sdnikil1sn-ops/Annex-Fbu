@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "<firebase-project-id>"
-  }
+    "default": "annex-adv-38561"
+  },
+  "targets": {},
+  "etags": {}
 }

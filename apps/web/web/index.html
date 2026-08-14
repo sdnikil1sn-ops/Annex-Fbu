@@ -16,6 +16,22 @@
   <title>ANNEX</title>
 </head>
 <body>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script>
+  const firebaseConfig = {
+  apiKey: "AIzaSyDi-w4PxwL7IMekiztf2f641QB-79Zz_6E",
+  authDomain: "annex-adv-38561.firebaseapp.com",
+  projectId: "annex-adv-38561",
+  storageBucket: "annex-adv-38561.firebasestorage.app",
+  messagingSenderId: "294477889054",
+  appId: "1:294477889054:web:749909fc91c43056f0b80f",
+  measurementId: "G-N088NRPMYD"
+};
+firebase.initializeApp(firebaseConfig);
+</script>
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
   <!-- This script installs flutter.js, loads the app, and sets up the
        service worker. The app is rendered into the DOM by Flutter. -->
   <script src="flutter_bootstrap.js" async></script>
