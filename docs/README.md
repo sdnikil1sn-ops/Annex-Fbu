@@ -26,6 +26,8 @@ repository as the code.
 | `packages/shared_features` | ✅ Shared Flutter features: controllers, gateways, screens, `AppScope` | 12 |
 | `apps/` (extension) | ✅ React + TS MV3 browser extension | 10 |
 | `deploy/` (Cloud Run manifests) | ✅ Created — `deploy/cloudrun/` API + worker | 11 |
+| `api/v1-endpoints.md` (classes) | ✅ Educator endpoints contract — classes, membership, assignments | 17 |
+| `supabase/migrations/20260813000001_educator.sql` | ✅ Classes, membership, assignments + RLS | 17 |
 
 ## Standards
 

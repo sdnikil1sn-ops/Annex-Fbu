@@ -15,6 +15,7 @@ from app.application.ports.ai import ClaimAnalyzer
 from app.application.ports.auth import TokenVerificationError, TokenVerifier
 from app.application.services.analysis_service import AnalysisService
 from app.application.services.claims_service import ClaimsService
+from app.application.services.class_service import ClassService
 from app.application.services.education_service import EducationService
 from app.application.services.i18n_service import I18nService
 from app.application.services.media_service import MediaService
@@ -109,6 +110,18 @@ def get_education_service_dep(request: Request) -> EducationService:
         raise AppError(
             "education.not_configured",
             "The curriculum is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_class_service_dep(request: Request) -> ClassService:
+    """Return the bound class service, or 503 when it is not configured."""
+    service: ClassService | None = getattr(request.app.state, "class_service", None)
+    if service is None:
+        raise AppError(
+            "classes.not_configured",
+            "Educator tools are not configured on this server.",
             status_code=503,
         )
     return service

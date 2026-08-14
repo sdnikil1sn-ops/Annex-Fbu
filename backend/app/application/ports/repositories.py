@@ -12,6 +12,12 @@ from uuid import UUID
 from app.application.ports.auth import VerifiedIdentity
 from app.domain.analysis import Analysis
 from app.domain.claim import Claim
+from app.domain.classroom import (
+    Assignment,
+    AssignmentProgress,
+    ClassMember,
+    ClassRoom,
+)
 from app.domain.i18n import I18nLocale, TranslationEntry
 from app.domain.lesson import Lesson, LessonProgress
 from app.domain.media import MediaItem
@@ -127,3 +133,56 @@ class LessonRepository(Protocol):
     ) -> Lesson | None: ...
 
     def mark_complete(self, user_id: UUID, lesson_id: UUID) -> LessonProgress: ...
+
+
+class ClassRepository(Protocol):
+    """Persistence contract for educator classes (Phase 17).
+
+    Class rows carry the teacher as ``owner_id`` and the owner is also
+    inserted into ``class_members`` with role ``teacher``, so membership
+    is the single source of truth for who may act on a class. Progress
+    reports join members against ``lesson_progress`` (Phase 15) — no
+    separate progress store exists.
+    """
+
+    def create_class(
+        self,
+        owner_id: UUID,
+        name: str,
+        description: str,
+        invite_code: str,
+    ) -> ClassRoom: ...
+
+    def list_classes(self, user_id: UUID) -> list[ClassRoom]: ...
+
+    def get_class(self, class_id: UUID, user_id: UUID) -> ClassRoom | None: ...
+
+    def membership_role(self, class_id: UUID, user_id: UUID) -> str | None: ...
+
+    def join_class(self, invite_code: str, user_id: UUID) -> ClassMember | None: ...
+
+    def resolve_lesson(self, lesson_ref: str) -> UUID | None: ...
+
+    def assign_lesson(
+        self,
+        class_id: UUID,
+        lesson_id: UUID,
+        assigned_by: UUID,
+        due_at: datetime | None,
+    ) -> Assignment | None: ...
+
+    def list_assignments(self, class_id: UUID) -> list[Assignment]: ...
+
+    def get_assignment(self, class_id: UUID, assignment_id: UUID) -> Assignment | None: ...
+
+    def delete_assignment(self, class_id: UUID, assignment_id: UUID) -> bool: ...
+
+    def assignment_progress(
+        self, class_id: UUID, assignment_id: UUID
+    ) -> AssignmentProgress | None: ...
+
+    def class_progress(self, class_id: UUID) -> list[AssignmentProgress]: ...
+
+    def remove_member(self, class_id: UUID, member_id: UUID) -> bool: ...
+
+    def delete_class(self, class_id: UUID) -> bool: ...

@@ -107,7 +107,38 @@
 > (the first completion wins). An unknown lesson reference answers
 > `lesson.not_found`.
 
-## i18n
+## Classes (educator tools)
+
+> Implemented in Phase 17. Any authenticated user can create a class
+> (becoming its teacher) and invite students with the generated invite
+> code; teachers assign published lessons and read class-wide completion
+> progress. Progress is derived from `lesson_progress` (Phase 15), so
+> there is no separate progress store. Authorization is enforced at the
+> service boundary — calls from non-members/non-teachers answer
+> `class.not_found` and never reveal whether a class exists.
+
+| Method | Path | Auth | Rate limit | Purpose |
+|---|---|---|---|---|
+| POST | `/api/v1/classes` | token | 30/min | Create a class; the caller becomes its teacher |
+| GET | `/api/v1/classes` | member | 60/min | List the caller's classes (owned or joined) with role |
+| GET | `/api/v1/classes/{id}` | member | 120/min | Class detail with the member roster |
+| POST | `/api/v1/classes/{id}/join` | token | 30/min | Join by invite code (idempotent) |
+| POST | `/api/v1/classes/{id}/assignments` | teacher | 30/min | Assign a published lesson (by UUID or slug) |
+| GET | `/api/v1/classes/{id}/assignments` | member | 60/min | Assignments with completion stats |
+| GET | `/api/v1/classes/{id}/progress` | teacher | 60/min | Per-assignment, per-student completion |
+| GET | `/api/v1/classes/{id}/assignments/{assignment_id}/progress` | teacher | 60/min | Per-student completion for one assignment |
+| DELETE | `/api/v1/classes/{id}/assignments/{assignment_id}` | teacher | 30/min | Unassign a lesson |
+| DELETE | `/api/v1/classes/{id}/members/{member_id}` | teacher | 30/min | Remove a student |
+| DELETE | `/api/v1/classes/{id}` | owner | 10/min | Delete a class (members + assignments cascade) |
+
+> Invite codes are 8 characters from an unambiguous alphabet
+> (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`). Assignments are unique per
+> (class, lesson): re-assigning the same lesson is idempotent and returns
+> the existing assignment. An unknown lesson reference answers
+> `lesson.not_found`; an unknown class (or a teacher-only call from a
+> non-teacher) answers `class.not_found`. The class service is optional
+> at the server level — when unconfigured, every classes route answers
+> `classes.not_configured` (503).
 
 ## i18n
 

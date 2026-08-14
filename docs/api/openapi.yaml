@@ -531,6 +531,363 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes:
+    get:
+      tags:
+      - classes
+      summary: List Classes
+      description: List the caller's classes (owned or joined) with their role.
+      operationId: list_classes_api_v1_classes_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response List Classes Api V1 Classes Get
+    post:
+      tags:
+      - classes
+      summary: Create Class
+      description: Create a class; the caller becomes its teacher.
+      operationId: create_class_api_v1_classes_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassRequest'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Create Class Api V1 Classes Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes/{class_id}:
+    get:
+      tags:
+      - classes
+      summary: Get Class
+      description: Fetch one class with its member roster (members only).
+      operationId: get_class_api_v1_classes__class_id__get
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Class Api V1 Classes  Class Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - classes
+      summary: Delete Class
+      description: Delete a class and its members/assignments (owner only).
+      operationId: delete_class_api_v1_classes__class_id__delete
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Delete Class Api V1 Classes  Class Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes/{class_id}/join:
+    post:
+      tags:
+      - classes
+      summary: Join Class
+      description: 'Join a class by its invite code (idempotent).
+
+
+        The class is resolved from the invite code in the body — the URL id
+
+        is not trusted for joining, so a stale or wrong link cannot
+
+        misdirect a join.'
+      operationId: join_class_api_v1_classes__class_id__join_post
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinClassRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Join Class Api V1 Classes  Class Id  Join Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes/{class_id}/assignments:
+    post:
+      tags:
+      - classes
+      summary: Assign Lesson
+      description: Assign a published lesson to a class (teacher only, idempotent).
+      operationId: assign_lesson_api_v1_classes__class_id__assignments_post
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignLessonRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assign Lesson Api V1 Classes  Class Id  Assignments
+                  Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - classes
+      summary: List Assignments
+      description: List a class's assignments with completion stats (members only).
+      operationId: list_assignments_api_v1_classes__class_id__assignments_get
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Assignments Api V1 Classes  Class Id  Assignments
+                  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes/{class_id}/progress:
+    get:
+      tags:
+      - classes
+      summary: Class Progress
+      description: Per-assignment, per-student completion for a class (teacher only).
+      operationId: class_progress_api_v1_classes__class_id__progress_get
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Class Progress Api V1 Classes  Class Id  Progress
+                  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes/{class_id}/assignments/{assignment_id}/progress:
+    get:
+      tags:
+      - classes
+      summary: Assignment Progress
+      description: Per-student completion for one assignment (teacher only).
+      operationId: assignment_progress_api_v1_classes__class_id__assignments__assignment_id__progress_get
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      - name: assignment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Assignment Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Assignment Progress Api V1 Classes  Class Id  Assignments  Assignment
+                  Id  Progress Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes/{class_id}/assignments/{assignment_id}:
+    delete:
+      tags:
+      - classes
+      summary: Unassign Lesson
+      description: Remove an assignment (teacher only).
+      operationId: unassign_lesson_api_v1_classes__class_id__assignments__assignment_id__delete
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      - name: assignment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Assignment Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Unassign Lesson Api V1 Classes  Class Id  Assignments  Assignment
+                  Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/classes/{class_id}/members/{member_id}:
+    delete:
+      tags:
+      - classes
+      summary: Remove Member
+      description: Remove a student from a class (teacher only).
+      operationId: remove_member_api_v1_classes__class_id__members__member_id__delete
+      parameters:
+      - name: class_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Class Id
+      - name: member_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Member Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Remove Member Api V1 Classes  Class Id  Members  Member
+                  Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/i18n/locales:
     get:
       tags:
@@ -600,6 +957,44 @@ components:
       - image
       title: AnalysisInputType
       description: The kind of content submitted for analysis.
+    AssignLessonRequest:
+      properties:
+        lesson_ref:
+          type: string
+          maxLength: 120
+          minLength: 1
+          title: Lesson Ref
+        due_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Due At
+      type: object
+      required:
+      - lesson_ref
+      title: AssignLessonRequest
+      description: 'Body for ``POST /classes/{id}/assignments``.
+
+
+        ``lesson_ref`` accepts either a lesson UUID or its stable slug.'
+    CreateClassRequest:
+      properties:
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+          title: Name
+        description:
+          type: string
+          maxLength: 2000
+          title: Description
+          default: ''
+      type: object
+      required:
+      - name
+      title: CreateClassRequest
+      description: Body for ``POST /classes``.
     HTTPValidationError:
       properties:
         detail:
@@ -609,6 +1004,19 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    JoinClassRequest:
+      properties:
+        invite_code:
+          type: string
+          maxLength: 8
+          minLength: 8
+          pattern: ^[A-Za-z0-9]{8}$
+          title: Invite Code
+      type: object
+      required:
+      - invite_code
+      title: JoinClassRequest
+      description: Body for ``POST /classes/{id}/join``.
     SubmitAnalysisRequest:
       properties:
         input_type:

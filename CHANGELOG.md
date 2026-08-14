@@ -428,6 +428,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     → complete flow (26 shared_models + 21 shared_features + 9 app
     widget tests).
 
+- **Educator tools — classes, membership, and lesson assignments (Phase 17).**
+  - New domain aggregate (`app.domain.classroom`): `ClassRoom`,
+    `ClassMember`, `Assignment`, `StudentProgress`, `AssignmentProgress`,
+    plus the invite-code alphabet and length constants. A class is owned
+    by its creator, who becomes a `teacher` member; students join with
+    the 8-character invite code (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — no
+    confusing characters).
+  - `ClassRepository` port with a PostgreSQL implementation
+    (`class_repository.py`, migration `20260813000001_educator.sql`)
+    and an explicit in-memory mock for tests. The owner is inserted into
+    `class_members` as `teacher` at creation, so membership is the single
+    authorization check; `assignments` are unique per (class, lesson),
+    making re-assignment idempotent; RLS policies let members read and
+    the owner manage (defense-in-depth, ADR-0004).
+  - `ClassService` (application layer) enforces teacher-only operations
+    at the service boundary — non-members/non-teachers receive None,
+    which the API turns into `class.not_found` so callers can never
+    learn whether a class exists.
+  - Progress reports join class members against `lesson_progress`
+    (Phase 15) — no duplicate progress store. `completed_count` /
+    `member_count` ride on each assignment so teachers get at-a-glance
+    completion.
+  - v1 endpoints (`app/api/v1/classes.py`): `POST /classes`, `GET
+    /classes`, `GET /classes/{id}`, `POST /classes/{id}/join`,
+    `POST /classes/{id}/assignments` (lesson by UUID or slug),
+    `GET /classes/{id}/assignments`, `GET /classes/{id}/progress`,
+    `GET /classes/{id}/assignments/{assignment_id}/progress`,
+    `DELETE /classes/{id}/assignments/{assignment_id}`,
+    `DELETE /classes/{id}/members/{member_id}`, and
+    `DELETE /classes/{id}`. Error codes: `class.not_found`,
+    `lesson.not_found`, `classes.not_configured` (503 when no class
+    service is wired).
+  - Tests: service unit tests (invite-code uniqueness, join idempotency,
+    teacher-only guards, progress derivation), API tests (create/join/
+    assign/progress flows, 404 hiding, 503 unconfigured), and repository
+    integration tests (270 backend tests total).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -453,6 +490,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   documents the Phase 15 status; OpenAPI contract regenerated.
 - `apps/web/README.md` and `apps/mobile/README.md` updated with the
   Phase 16 lessons feature status.
+- `docs/api/v1-endpoints.md` updated with the Phase 17 classes contract
+  (create/join/assign/progress routes, invite-code rules, error codes);
+  `backend/README.md` documents the Phase 17 status; OpenAPI contract
+  regenerated.
 
 ### Deprecated
 

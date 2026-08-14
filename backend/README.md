@@ -104,3 +104,14 @@ backend/
   list + progress), ``GET /lessons/{id}`` (content + sections), and
   ``POST /lessons/{id}/complete`` (first completion wins). Seed migration
   ``20260812000006_lesson_seed.sql``. 242 backend tests.
+- **Phase 17 (done):** Educator tools — classes, membership, and lesson
+  assignments. ``ClassService`` + ``ClassRepository`` (PostgreSQL +
+  mock) coordinate classes owned by their creator (a ``teacher`` member),
+  invite-code joining (``ABCDEFGHJKLMNPQRSTUVWXYZ23456789``, 8 chars),
+  and assignments unique per (class, lesson). Progress reports derive
+  per-student completion by joining members against ``lesson_progress``
+  (Phase 15) — no separate progress store. Teacher-only operations are
+  guarded at the service boundary and answer ``class.not_found`` (404)
+  for non-teachers; the endpoints are optional at the server level
+  (``classes.not_configured`` 503 when unwired). Migration
+  ``20260813000001_educator.sql``. 270 backend tests.
