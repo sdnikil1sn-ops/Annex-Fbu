@@ -313,7 +313,12 @@ paths:
       tags:
       - sources
       summary: Get Source
-      description: Fetch one source profile with its credibility score.
+      description: 'Fetch one source profile with its credibility score.
+
+
+        Public read: the profile carries the community aggregate; when the
+
+        caller supplies a token, it also includes their own rating.'
       operationId: get_source_api_v1_sources__domain__get
       parameters:
       - name: domain
@@ -331,6 +336,48 @@ paths:
                 type: object
                 additionalProperties: true
                 title: Response Get Source Api V1 Sources  Domain  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/sources/{domain}/rate:
+    post:
+      tags:
+      - sources
+      summary: Rate Source
+      description: 'Rate a source''s credibility (1–5), updating the community signal.
+
+
+        Re-rating replaces the caller''s own rating (one voice per user); the
+
+        response carries the updated profile with the aggregated community
+
+        count and average.'
+      operationId: rate_source_api_v1_sources__domain__rate_post
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Domain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateSourceRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Rate Source Api V1 Sources  Domain  Rate Post
         '422':
           description: Validation Error
           content:
@@ -1195,6 +1242,18 @@ components:
       - invite_code
       title: JoinClassRequest
       description: Body for ``POST /classes/{id}/join``.
+    RateSourceRequest:
+      properties:
+        rating:
+          type: integer
+          maximum: 5.0
+          minimum: 1.0
+          title: Rating
+      type: object
+      required:
+      - rating
+      title: RateSourceRequest
+      description: Body for ``POST /sources/{domain}/rate``.
     ReviewSuggestionRequest:
       properties:
         approved:

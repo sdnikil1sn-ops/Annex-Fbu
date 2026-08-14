@@ -138,12 +138,22 @@ class SourceRepository(Protocol):
     """Persistence contract for the Source registry (Phase 14).
 
     Sources are public-read (RLS policy matrix); writes happen through
-    the service role only (seeding, background scoring).
+    the service role only (seeding, background scoring). ``rate``
+    (Phase 19) records community credibility feedback: one rating per
+    (source, user), re-rating updates the row. Reads attach the
+    aggregated community signal (count + average) and the caller's own
+    rating when a user id is supplied.
     """
 
-    def get_by_domain(self, domain: str) -> Source | None: ...
+    def get_by_domain(
+        self, domain: str, *, user_id: UUID | None = None
+    ) -> Source | None: ...
 
-    def search(self, query: str, *, limit: int = 20) -> list[Source]: ...
+    def search(
+        self, query: str, *, limit: int = 20, user_id: UUID | None = None
+    ) -> list[Source]: ...
+
+    def rate(self, domain: str, user_id: UUID, rating: int) -> Source | None: ...
 
 
 class MediaRepository(Protocol):

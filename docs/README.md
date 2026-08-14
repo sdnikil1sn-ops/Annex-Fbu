@@ -30,6 +30,8 @@ repository as the code.
 | `supabase/migrations/20260813000001_educator.sql` | ✅ Classes, membership, assignments + RLS | 17 |
 | `api/v1-endpoints.md` (suggestions) | ✅ Community translation contract — missing/submit/review | 18 |
 | `supabase/migrations/20260814000001_translation_suggestions.sql` | ✅ Translation suggestion queue + RLS | 18 |
+| `api/v1-endpoints.md` (sources feedback) | ✅ Community credibility contract — rate + aggregate | 19 |
+| `supabase/migrations/20260815000001_source_feedback.sql` | ✅ Source credibility ratings + RLS | 19 |
 
 ## Standards
 

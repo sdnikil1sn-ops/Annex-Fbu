@@ -129,3 +129,12 @@ backend/
   /i18n/suggestions/pending`` + ``POST /i18n/suggestions/{id}/review``
   (moderator/admin). One open suggestion per (user, locale, key);
   re-submission updates the pending row. 293 backend tests.
+- **Phase 19 (done):** Community credibility feedback on the public
+  source registry. ``source_feedback`` (migration
+  ``20260815000001_source_feedback.sql``) holds one 1–5 rating per
+  (source, user), upserted on re-rating; source profiles now carry the
+  model credibility score *and* the aggregated community signal
+  (``community.count`` / ``community.average``), with ``my_rating``
+  surfaced only to authenticated callers. ``SourceRepository.rate`` +
+  feedback-aware reads (PostgreSQL + mock), ``SourceService.rate``, and
+  ``POST /sources/{domain}/rate``. 305 backend tests.

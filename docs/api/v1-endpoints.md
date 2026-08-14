@@ -67,13 +67,26 @@
 
 ## Sources
 
-> Implemented in Phase 14. The publisher/domain registry is public-read
-> (RLS policy matrix); profiles carry the latest credibility score.
+> Implemented in Phase 14; community credibility feedback added in
+> Phase 19. The publisher/domain registry is public-read (RLS policy
+> matrix); profiles carry the latest model credibility score **and** the
+> aggregated community signal (`community.count` / `community.average`),
+> so the registry grows more accurate the more it is used. Any
+> authenticated user rates a source 1–5; re-rating replaces the caller's
+> own rating (one voice per user).
 
 | Method | Path | Auth | Rate limit | Purpose |
 |---|---|---|---|---|
-| GET | `/api/v1/sources/{domain}` | none | 60/min | Source profile + credibility score |
+| GET | `/api/v1/sources/{domain}` | none | 60/min | Source profile + model score + community aggregate |
 | GET | `/api/v1/sources/search?q=` | none | 60/min | Search sources by name/domain |
+| POST | `/api/v1/sources/{domain}/rate` | token | 30/min | Rate source credibility (1–5), upsert per user |
+
+> `GET /sources/{domain}` is public, but when the caller supplies a token
+> the profile also includes their own rating as `community.my_rating`
+> (the rating is never exposed to anonymous readers). Rating a source
+> returns the updated profile; rating an unknown domain answers
+> `source.not_found`. Ratings are bounded 1–5 (validation error
+> otherwise).
 
 ## Media
 

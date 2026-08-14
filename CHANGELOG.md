@@ -501,6 +501,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the live bundle), and repository integration tests (293 backend
     tests total).
 
+- **Public source credibility registry — community feedback (Phase 19).**
+  - ``source_feedback`` table (migration
+    `20260815000001_source_feedback.sql`): one credibility rating (1–5)
+    per (source, user), upserted on re-rating so each user contributes
+    exactly one voice. RLS lets users manage only their own rows; the
+    service role reads the aggregate.
+  - Domain: ``SourceFeedback`` aggregate (count, average, caller's own
+    rating) attached to ``Source`` — profiles now render the model
+    credibility score *and* the community signal side by side, so the
+    registry grows more accurate the more it is used.
+  - Port: ``SourceRepository.rate`` plus optional ``user_id`` on
+    ``get_by_domain``/``search`` so reads attach the aggregate and the
+    caller's rating; PostgreSQL + mock implementations both extended.
+  - ``SourceService.rate`` (upsert per user, None for unknown domains)
+    and ``get_profile``/``search`` accept the caller id.
+  - v1 endpoints (`app/api/v1/sources.py`): `POST /sources/{domain}/rate`
+    (token, rating bounded 1–5) returning the updated profile; `GET
+    /sources/{domain}` and `GET /sources/search` now include
+    `community` and expose `my_rating` only to authenticated callers.
+  - Tests: service unit tests (single voice per user, aggregation,
+    unknown-domain None), API tests (auth-gated rate, upsert semantics,
+    range validation, anonymous vs. authenticated profile reads), and
+    repository integration tests (305 backend tests total).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -534,6 +558,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   contract (missing/submit/review routes, moderator role gate, error
   codes); `backend/README.md` documents the Phase 18 status; OpenAPI
   contract regenerated.
+- `docs/api/v1-endpoints.md` updated with the Phase 19 sources contract
+  (community aggregate on profiles, rate endpoint, my_rating
+  visibility); `backend/README.md` documents the Phase 19 status;
+  OpenAPI contract regenerated.
 
 ### Deprecated
 
