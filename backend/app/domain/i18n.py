@@ -12,11 +12,25 @@ Fallback chain (requested → parent → … → default):
 A bundle for ``pt`` whose chain is ``[pt, en]`` contains the Portuguese
 entries plus every key the Portuguese set does not define, filled from
 ``en``. The requested locale always wins over its fallbacks.
+
+Phase 18 adds community contribution: ``TranslationSuggestion`` (a
+proposed value for a key) and ``MissingKey`` (a key the default locale
+defines that a target locale has not translated yet). Approved
+suggestions are published into ``i18n_translations`` with a version
+bump so bundles refresh over the air.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
+from uuid import UUID, uuid4
+
+# Suggestion lifecycle states (Phase 18).
+SUGGESTION_PENDING = "pending"
+SUGGESTION_APPROVED = "approved"
+SUGGESTION_REJECTED = "rejected"
+SUGGESTION_STATUSES = (SUGGESTION_PENDING, SUGGESTION_APPROVED, SUGGESTION_REJECTED)
 
 
 @dataclass(frozen=True)
@@ -50,6 +64,63 @@ class TranslationEntry:
     value: str
     plural_rule: str = "none"
     version: int = 1
+
+    @property
+    def full_key(self) -> str:
+        """The dotted ``namespace.key`` identifier clients reference."""
+        return f"{self.namespace}.{self.key}"
+
+
+@dataclass(frozen=True)
+class MissingKey:
+    """A key the default locale defines that a target locale lacks.
+
+    Attributes:
+        namespace: Feature/domain namespace (e.g. ``common``).
+        key: Stable, typed key within the namespace.
+        english_value: The default-locale source text contributors
+            translate from.
+    """
+
+    namespace: str
+    key: str
+    english_value: str
+
+    @property
+    def full_key(self) -> str:
+        """The dotted ``namespace.key`` identifier clients reference."""
+        return f"{self.namespace}.{self.key}"
+
+
+@dataclass(frozen=True)
+class TranslationSuggestion:
+    """A community-proposed translation awaiting (or after) review.
+
+    Attributes:
+        id: Primary key of the ``translation_suggestions`` row.
+        locale_code: The target locale the value translates into.
+        namespace: Feature/domain namespace of the key.
+        key: Stable, typed key within the namespace.
+        value: The proposed translation.
+        plural_rule: ICU plural category of the proposed form.
+        suggested_by: The contributor's user id.
+        status: ``pending`` | ``approved`` | ``rejected``.
+        created_at: When the suggestion was submitted.
+        reviewed_by: The moderator who reviewed it, when reviewed.
+        reviewed_at: When the review happened, when reviewed.
+    """
+
+    locale_code: str
+    namespace: str
+    key: str
+    value: str
+    id: UUID = field(default_factory=uuid4)
+    plural_rule: str = "none"
+    suggested_by: UUID | None = None
+    status: str = SUGGESTION_PENDING
+    created_at: datetime | None = None
+    reviewed_by: UUID | None = None
+    reviewed_at: datetime | None = None
 
     @property
     def full_key(self) -> str:

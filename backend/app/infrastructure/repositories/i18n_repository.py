@@ -66,3 +66,47 @@ class PostgresI18nRepository(I18nRepository):
             )
             for row in rows
         ]
+
+    def publish_translation(
+        self,
+        locale_code: str,
+        namespace: str,
+        key: str,
+        value: str,
+        plural_rule: str = "none",
+    ) -> TranslationEntry | None:
+        """Upsert one translation entry, bumping its version (Phase 18).
+
+        Approved community suggestions arrive here; the version bump
+        shifts the locale bundle version so clients refresh over the air
+        (ADR-0007). Returns None when the locale is unknown or disabled.
+        """
+        with self._connect() as conn:
+            row: dict[str, Any] | None = conn.execute(
+                """
+                insert into public.i18n_translations
+                    (locale_id, namespace, key, value, plural_rule, version)
+                select l.id, %s, %s, %s, %s, coalesce(t.version, 0) + 1
+                from public.i18n_locales l
+                left join public.i18n_translations t
+                    on t.locale_id = l.id and t.namespace = %s and t.key = %s
+                where l.code = %s and l.enabled
+                on conflict (locale_id, namespace, key)
+                do update set
+                    value = excluded.value,
+                    plural_rule = excluded.plural_rule,
+                    version = public.i18n_translations.version + 1,
+                    updated_at = now()
+                returning namespace, key, value, plural_rule, version
+                """,
+                (namespace, key, value, plural_rule, namespace, key, locale_code),
+            ).fetchone()
+        if row is None:
+            return None
+        return TranslationEntry(
+            namespace=row["namespace"],
+            key=row["key"],
+            value=row["value"],
+            plural_rule=row["plural_rule"],
+            version=row["version"],
+        )

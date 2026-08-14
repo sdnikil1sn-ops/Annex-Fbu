@@ -28,6 +28,8 @@ repository as the code.
 | `deploy/` (Cloud Run manifests) | ✅ Created — `deploy/cloudrun/` API + worker | 11 |
 | `api/v1-endpoints.md` (classes) | ✅ Educator endpoints contract — classes, membership, assignments | 17 |
 | `supabase/migrations/20260813000001_educator.sql` | ✅ Classes, membership, assignments + RLS | 17 |
+| `api/v1-endpoints.md` (suggestions) | ✅ Community translation contract — missing/submit/review | 18 |
+| `supabase/migrations/20260814000001_translation_suggestions.sql` | ✅ Translation suggestion queue + RLS | 18 |
 
 ## Standards
 

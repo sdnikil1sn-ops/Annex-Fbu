@@ -142,10 +142,34 @@
 
 ## i18n
 
+> Runtime translation delivery (ADR-0007): adding a language is a data
+> change, never a rebuild. Phase 18 adds community contribution —
+> contributors propose translations for untranslated keys, moderators
+> review, and approved suggestions are published into the live store
+> with a version bump so bundles refresh over the air.
+
 | Method | Path | Auth | Rate limit | Purpose |
 |---|---|---|---|---|
 | GET | `/api/v1/i18n/locales` | none | 120/min | Enabled locales + fallback chain |
 | GET | `/api/v1/i18n/bundles/{locale}?version=` | none | 120/min | Versioned translation bundle (ADR-0007) |
+| GET | `/api/v1/i18n/suggestions/missing?locale=` | none | 120/min | Untranslated keys for a locale (public) |
+| POST | `/api/v1/i18n/suggestions` | token | 30/min | Propose a translation (pending until review) |
+| GET | `/api/v1/i18n/suggestions` | token | 60/min | The caller's suggestions (optional `?status=`) |
+| GET | `/api/v1/i18n/suggestions/pending` | moderator/admin | 60/min | The review queue, oldest first |
+| POST | `/api/v1/i18n/suggestions/{id}/review` | moderator/admin | 30/min | Approve/reject a pending suggestion |
+
+> `GET /suggestions/missing` lists keys the default locale defines that
+> the requested locale has not translated yet (with the English source
+> text), so contributors know what to work on; it is public like the
+> bundle endpoints. Submitting a suggestion requires a token; the review
+> queue and reviews require the `moderator` (or `admin`) role. A
+> re-submission for the same (user, locale, key) updates the existing
+> pending suggestion — the queue stays clean. Approving a suggestion
+> publishes its value into `i18n_translations` with a version bump, so
+> the next bundle fetch returns the new value. Error codes:
+> `i18n.locale_not_found`, `i18n.suggestion_not_found`, and
+> `i18n.suggestions_not_configured` (503 when no suggestion service is
+> wired).
 
 ## Submit contract for `POST /analysis`
 

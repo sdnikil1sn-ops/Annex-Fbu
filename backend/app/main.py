@@ -26,6 +26,9 @@ from app.application.services.i18n_service import I18nService
 from app.application.services.media_pipeline import MediaPipeline
 from app.application.services.media_service import MediaService
 from app.application.services.source_service import SourceService
+from app.application.services.translation_suggestion_service import (
+    TranslationSuggestionService,
+)
 from app.application.services.user_service import UserService
 from app.core.checks import DatabaseHealthCheck, DependencyCheck, RedisHealthCheck
 from app.core.config import Settings, get_settings
@@ -48,6 +51,9 @@ from app.infrastructure.repositories.i18n_repository import PostgresI18nReposito
 from app.infrastructure.repositories.lesson_repository import PostgresLessonRepository
 from app.infrastructure.repositories.media_repository import PostgresMediaRepository
 from app.infrastructure.repositories.source_repository import PostgresSourceRepository
+from app.infrastructure.repositories.translation_suggestion_repository import (
+    PostgresTranslationSuggestionRepository,
+)
 from app.infrastructure.repositories.user_repository import PostgresUserRepository
 from app.infrastructure.tasks.dispatcher import build_analysis_task_dispatcher
 
@@ -68,6 +74,7 @@ def create_app(
     education_service: EducationService | None = None,
     class_service: ClassService | None = None,
     i18n_service: I18nService | None = None,
+    translation_suggestion_service: TranslationSuggestionService | None = None,
     rate_limiter: RateLimiter | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application instance.
@@ -110,6 +117,10 @@ def create_app(
         i18n_service: Optional i18n service override (tests use the
             in-memory repository); defaults to the PostgreSQL-backed service
             when a database is configured (ADR-0007).
+        translation_suggestion_service: Optional suggestion service override
+            (tests use the in-memory repository); defaults to the
+            PostgreSQL-backed service when a database is configured
+            (Phase 18).
         rate_limiter: Optional rate limiter override (tests inject a
             deterministic limiter); defaults to a Redis-backed limiter when
             Redis is configured, else a no-op fallback.
@@ -235,6 +246,16 @@ def create_app(
             default_locale=settings.i18n_default_locale,
         )
     app.state.i18n_service = i18n_service
+
+    # Community translations (Phase 18): the suggestion review queue
+    # publishes approved values into i18n_translations through the i18n
+    # repository, so it needs both ports wired from the same database.
+    if translation_suggestion_service is None and settings.database_url:
+        translation_suggestion_service = TranslationSuggestionService(
+            PostgresTranslationSuggestionRepository(settings.database_url),
+            PostgresI18nRepository(settings.database_url),
+        )
+    app.state.translation_suggestion_service = translation_suggestion_service
 
     # add_middleware prepends: the LAST registration is the OUTERMOST layer.
     # Order: RateLimit innermost (so 429s pass through CORS and carry CORS

@@ -20,6 +20,9 @@ from app.application.services.education_service import EducationService
 from app.application.services.i18n_service import I18nService
 from app.application.services.media_service import MediaService
 from app.application.services.source_service import SourceService
+from app.application.services.translation_suggestion_service import (
+    TranslationSuggestionService,
+)
 from app.application.services.user_service import UserService
 from app.core.config import Settings
 from app.domain.user import User
@@ -98,6 +101,20 @@ def get_media_service_dep(request: Request) -> MediaService:
         raise AppError(
             "media.not_configured",
             "Media processing is not configured on this server.",
+            status_code=503,
+        )
+    return service
+
+
+def get_translation_suggestion_service_dep(request: Request) -> TranslationSuggestionService:
+    """Return the bound suggestion service, or 503 when it is not configured."""
+    service: TranslationSuggestionService | None = getattr(
+        request.app.state, "translation_suggestion_service", None
+    )
+    if service is None:
+        raise AppError(
+            "i18n.suggestions_not_configured",
+            "Community translations are not configured on this server.",
             status_code=503,
         )
     return service

@@ -465,6 +465,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     assign/progress flows, 404 hiding, 503 unconfigured), and repository
     integration tests (270 backend tests total).
 
+- **Community-contributed translations (Phase 18).**
+  - ``translation_suggestions`` review queue (migration
+    `20260814000001_translation_suggestions.sql`): contributors propose
+    values for untranslated keys, moderators approve/reject, and approved
+    values are published into ``i18n_translations`` with a version bump —
+    bundles refresh over the air, keeping the ADR-0007 promise that
+    adding/filling a language is a data change, never a rebuild. A
+    partial unique index keeps one open suggestion per (user, locale,
+    key) so re-submission is an update, and RLS lets contributors manage
+    their own pending rows while moderators run the queue.
+  - Domain: ``TranslationSuggestion`` (pending/approved/rejected
+    lifecycle) and ``MissingKey`` (default-locale keys a target locale
+    lacks) in ``app.domain.i18n``.
+  - Ports: ``TranslationSuggestionRepository`` (missing/submit/get/
+    list/pending/review) and ``I18nRepository.publish_translation``
+    (upsert + version bump), each with a PostgreSQL implementation and
+    an explicit in-memory mock.
+  - ``TranslationSuggestionService`` coordinates the flow: enabled-locale
+    validation, idempotent submission, one-shot review, and the publish
+    on approval. ``list_missing`` derives gaps from the live
+    ``i18n_translations`` set, so approved suggestions stop being
+    missing naturally.
+  - v1 endpoints (`app/api/v1/i18n_suggestions.py`):
+    `GET /i18n/suggestions/missing` (public), `POST /i18n/suggestions`
+    (token), `GET /i18n/suggestions` (own, `?status=` filter),
+    `GET /i18n/suggestions/pending` and
+    `POST /i18n/suggestions/{id}/review` (moderator/admin role gate via
+    ``require_roles``). Error codes: ``i18n.locale_not_found``,
+    ``i18n.suggestion_not_found``, ``i18n.suggestions_not_configured``
+    (503).
+  - Tests: service unit tests (missing derivation, idempotent submit,
+    one-shot review, publish on approve), API tests (public missing,
+    auth-gated submit, moderator-only review/pending, publish visible in
+    the live bundle), and repository integration tests (293 backend
+    tests total).
+
 ### Changed
 
 - Root `README.md` and `docs/README.md` updated to the Phase 2 architecture
@@ -494,6 +530,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (create/join/assign/progress routes, invite-code rules, error codes);
   `backend/README.md` documents the Phase 17 status; OpenAPI contract
   regenerated.
+- `docs/api/v1-endpoints.md` updated with the Phase 18 suggestion
+  contract (missing/submit/review routes, moderator role gate, error
+  codes); `backend/README.md` documents the Phase 18 status; OpenAPI
+  contract regenerated.
 
 ### Deprecated
 

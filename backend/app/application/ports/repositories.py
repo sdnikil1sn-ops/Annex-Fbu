@@ -18,7 +18,12 @@ from app.domain.classroom import (
     ClassMember,
     ClassRoom,
 )
-from app.domain.i18n import I18nLocale, TranslationEntry
+from app.domain.i18n import (
+    I18nLocale,
+    MissingKey,
+    TranslationEntry,
+    TranslationSuggestion,
+)
 from app.domain.lesson import Lesson, LessonProgress
 from app.domain.media import MediaItem
 from app.domain.source import Source
@@ -47,11 +52,54 @@ class I18nRepository(Protocol):
     Locales are the enabled set only; disabled locales are invisible to
     clients (their bundles answer 404). Translations are fetched per
     locale and merged into bundles by the service.
+
+    ``publish_translation`` (Phase 18) upserts one entry and bumps its
+    version so bundle versions shift and clients refresh — the path
+    approved community suggestions take to reach the live bundles.
     """
 
     def list_locales(self) -> list[I18nLocale]: ...
 
     def translations_for(self, locale_code: str) -> list[TranslationEntry]: ...
+
+    def publish_translation(
+        self,
+        locale_code: str,
+        namespace: str,
+        key: str,
+        value: str,
+        plural_rule: str = "none",
+    ) -> TranslationEntry | None: ...
+
+
+class TranslationSuggestionRepository(Protocol):
+    """Persistence contract for community translation suggestions (Phase 18).
+
+    ``translation_suggestions`` is a review queue: contributors submit
+    proposed values for keys, moderators approve or reject them, and an
+    approved suggestion is published into ``i18n_translations`` (with a
+    version bump) by the service via the I18nRepository. One pending
+    suggestion per (user, locale, key) keeps the queue clean — a
+    re-submission updates the contributor's own pending row.
+    """
+
+    def list_missing(
+        self, locale_code: str, default_locale: str = "en"
+    ) -> list[MissingKey]: ...
+
+    def submit(self, suggestion: TranslationSuggestion) -> TranslationSuggestion | None: ...
+
+    def get(self, suggestion_id: UUID) -> TranslationSuggestion | None: ...
+
+    def list_for_user(
+        self, user_id: UUID, *, status: str | None = None
+    ) -> list[TranslationSuggestion]: ...
+
+    def list_pending(self, *, limit: int = 50) -> list[TranslationSuggestion]: ...
+
+    def review(
+        self, suggestion_id: UUID, reviewer_id: UUID, approved: bool
+    ) -> TranslationSuggestion | None: ...
 
 
 class AnalysisRepository(Protocol):

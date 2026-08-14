@@ -66,6 +66,39 @@ class MockI18nRepository(I18nRepository):
         """Return the configured entries for a locale code."""
         return list(self._translations.get(locale_code, []))
 
+    def publish_translation(
+        self,
+        locale_code: str,
+        namespace: str,
+        key: str,
+        value: str,
+        plural_rule: str = "none",
+    ) -> TranslationEntry | None:
+        """Upsert one entry, bumping its version (Phase 18).
+
+        Mirrors the PostgreSQL implementation: the version is the old
+        version (or 0) + 1, so an approved community suggestion shifts
+        the bundle version and clients refresh.
+        """
+        if locale_code not in self._locales:
+            return None
+        existing = next(
+            (
+                entry
+                for entry in self._translations.get(locale_code, [])
+                if entry.namespace == namespace and entry.key == key
+            ),
+            None,
+        )
+        version = (existing.version if existing else 0) + 1
+        entry = TranslationEntry(namespace, key, value, plural_rule, version)
+        entries = self._translations.setdefault(locale_code, [])
+        if existing is not None:
+            entries[entries.index(existing)] = entry
+        else:
+            entries.append(entry)
+        return entry
+
     def add_locale(self, code: str, fallback_code: str | None = None) -> None:
         """Register an enabled locale (test helper)."""
         self._locales[code] = I18nLocale(code=code, fallback_code=fallback_code)

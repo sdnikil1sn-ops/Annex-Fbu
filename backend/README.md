@@ -115,3 +115,17 @@ backend/
   for non-teachers; the endpoints are optional at the server level
   (``classes.not_configured`` 503 when unwired). Migration
   ``20260813000001_educator.sql``. 270 backend tests.
+- **Phase 18 (done):** Community-contributed translations. A
+  ``translation_suggestions`` review queue (migration
+  ``20260814000001_translation_suggestions.sql``) lets contributors
+  propose values for untranslated keys; moderators approve/reject; an
+  approved value is published into ``i18n_translations`` with a version
+  bump so bundles refresh over the air (ADR-0007). New
+  ``TranslationSuggestionRepository`` port + PostgreSQL/mock
+  implementations, ``I18nRepository.publish_translation``, and the
+  ``TranslationSuggestionService``; endpoints: ``GET
+  /i18n/suggestions/missing`` (public), ``POST /i18n/suggestions``
+  (token), ``GET /i18n/suggestions`` (own), ``GET
+  /i18n/suggestions/pending`` + ``POST /i18n/suggestions/{id}/review``
+  (moderator/admin). One open suggestion per (user, locale, key);
+  re-submission updates the pending row. 293 backend tests.

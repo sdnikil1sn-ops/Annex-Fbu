@@ -947,6 +947,184 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/i18n/suggestions/missing:
+    get:
+      tags:
+      - i18n
+      summary: List Missing
+      description: 'List keys the default locale defines that ``locale`` lacks.
+
+
+        Public, like the bundle endpoints. The contributor uses this to pick
+
+        what to translate; approved suggestions stop being missing naturally.'
+      operationId: list_missing_api_v1_i18n_suggestions_missing_get
+      parameters:
+      - name: locale
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 2
+          maxLength: 16
+          title: Locale
+      - name: default_locale
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 2
+          maxLength: 16
+          default: en
+          title: Default Locale
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Missing Api V1 I18N Suggestions Missing Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/i18n/suggestions:
+    post:
+      tags:
+      - i18n
+      summary: Submit Suggestion
+      description: Submit a translation proposal for an enabled locale.
+      operationId: submit_suggestion_api_v1_i18n_suggestions_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitSuggestionRequest'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Submit Suggestion Api V1 I18N Suggestions Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - i18n
+      summary: List Own Suggestions
+      description: List the caller's suggestions, newest first (optional status filter).
+      operationId: list_own_suggestions_api_v1_i18n_suggestions_get
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^(pending|approved|rejected)$
+          - type: 'null'
+          title: Status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Own Suggestions Api V1 I18N Suggestions Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/i18n/suggestions/pending:
+    get:
+      tags:
+      - i18n
+      summary: List Pending
+      description: List the moderator review queue, oldest first.
+      operationId: list_pending_api_v1_i18n_suggestions_pending_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Pending Api V1 I18N Suggestions Pending Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/i18n/suggestions/{suggestion_id}/review:
+    post:
+      tags:
+      - i18n
+      summary: Review Suggestion
+      description: 'Approve or reject a pending suggestion (moderator+).
+
+
+        Approving publishes the value into ``i18n_translations`` with a
+
+        version bump, so clients refresh without a release.'
+      operationId: review_suggestion_api_v1_i18n_suggestions__suggestion_id__review_post
+      parameters:
+      - name: suggestion_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Suggestion Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewSuggestionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Review Suggestion Api V1 I18N Suggestions  Suggestion
+                  Id  Review Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
     AnalysisInputType:
@@ -1017,6 +1195,16 @@ components:
       - invite_code
       title: JoinClassRequest
       description: Body for ``POST /classes/{id}/join``.
+    ReviewSuggestionRequest:
+      properties:
+        approved:
+          type: boolean
+          title: Approved
+      type: object
+      required:
+      - approved
+      title: ReviewSuggestionRequest
+      description: Body for ``POST /i18n/suggestions/{id}/review``.
     SubmitAnalysisRequest:
       properties:
         input_type:
@@ -1069,6 +1257,41 @@ components:
       - image
       title: SubmitMediaRequest
       description: Body for ``POST /media``.
+    SubmitSuggestionRequest:
+      properties:
+        locale:
+          type: string
+          maxLength: 16
+          minLength: 2
+          title: Locale
+        namespace:
+          type: string
+          maxLength: 64
+          minLength: 1
+          title: Namespace
+        key:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Key
+        value:
+          type: string
+          maxLength: 1000
+          minLength: 1
+          title: Value
+        plural_rule:
+          type: string
+          pattern: ^(none|zero|one|two|few|many|other)$
+          title: Plural Rule
+          default: none
+      type: object
+      required:
+      - locale
+      - namespace
+      - key
+      - value
+      title: SubmitSuggestionRequest
+      description: Body for ``POST /i18n/suggestions``.
     ValidationError:
       properties:
         loc:
