@@ -27,6 +27,10 @@ abstract interface class AnalysisApi {
   /// Submit text for analysis; returns the created (pending) analysis.
   Future<Analysis> submitText(String text, {String locale = 'en'});
 
+  /// Submit an image (base64 or ``data:`` URL) for OCR + forensics-based
+  /// claim analysis; returns the created (pending) analysis.
+  Future<Analysis> submitImage(String image, {String locale = 'en'});
+
   /// Fetch an analysis by id (polling).
   Future<Analysis> fetchAnalysis(String id);
 
@@ -139,7 +143,7 @@ class HttpAnalysisApi implements AnalysisApi {
 
   /// Supplies the Firebase ID token for the Authorization header, or null
   /// for anonymous requests.
-  final String? Function()? tokenProvider;
+  final Future<String?> Function()? tokenProvider;
 
   @override
   Future<Analysis> submitText(String text, {String locale = 'en'}) async {
@@ -148,6 +152,20 @@ class HttpAnalysisApi implements AnalysisApi {
       'text': text,
       'locale': locale,
     });
+    return _analysisFromJson(json);
+  }
+
+  @override
+  Future<Analysis> submitImage(String image, {String locale = 'en'}) async {
+    final json = await _post('/analysis', {
+      'input_type': 'image',
+      'image': image,
+      'locale': locale,
+    });
+    return _analysisFromJson(json);
+  }
+
+  Analysis _analysisFromJson(Map<String, dynamic> json) {
     final data = json['data'];
     if (data is! Map) {
       throw const ApiException(
@@ -478,7 +496,10 @@ class HttpAnalysisApi implements AnalysisApi {
   }
 
   Future<Map<String, dynamic>> _get(String path) async {
-    final response = await _client.get(_uri(path), headers: _headers());
+    final response = await _client.get(
+      _uri(path),
+      headers: await _headers(),
+    );
     return _decode(response);
   }
 
@@ -488,21 +509,24 @@ class HttpAnalysisApi implements AnalysisApi {
   ) async {
     final response = await _client.post(
       _uri(path),
-      headers: {..._headers(), 'content-type': 'application/json'},
+      headers: {...await _headers(), 'content-type': 'application/json'},
       body: jsonEncode(body),
     );
     return _decode(response);
   }
 
   Future<Map<String, dynamic>> _delete(String path) async {
-    final response = await _client.delete(_uri(path), headers: _headers());
+    final response = await _client.delete(
+      _uri(path),
+      headers: await _headers(),
+    );
     return _decode(response);
   }
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
-  Map<String, String> _headers() {
-    final token = tokenProvider?.call();
+  Future<Map<String, String>> _headers() async {
+    final token = await tokenProvider?.call();
     return {
       if (token != null && token.isNotEmpty) 'authorization': 'Bearer $token',
       'accept': 'application/json',

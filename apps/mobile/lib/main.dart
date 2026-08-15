@@ -33,7 +33,7 @@ Future<void> main() async {
       ? MockAnalysisApi()
       : HttpAnalysisApi(
           baseUrl: apiBaseUrl,
-          tokenProvider: () => auth.currentUser?.uid,
+          tokenProvider: () => auth.idToken(),
         );
 
   final i18n = I18nController(api: api);

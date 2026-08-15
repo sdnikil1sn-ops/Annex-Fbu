@@ -61,10 +61,7 @@ class _LessonsScreenState extends State<LessonsScreen> {
     final i18n = AppScope.of(context).i18n;
     final controller = context.watch<LessonsController>();
 
-    return Scaffold(
-      appBar: AppBar(title: Text(i18n.t(StringKeys.lessonsTitle))),
-      body: _buildBody(context, i18n, controller),
-    );
+    return Scaffold(body: _buildBody(context, i18n, controller));
   }
 
   Widget _buildBody(
@@ -76,43 +73,68 @@ class _LessonsScreenState extends State<LessonsScreen> {
     if (controller.selected != null) {
       return _LessonDetail(controller: controller, i18n: i18n);
     }
+
+    final header = Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: PageHeader(
+        icon: Icons.menu_book_outlined,
+        title: i18n.t(StringKeys.lessonsTitle),
+        subtitle: i18n.t(StringKeys.lessonsSubtitle),
+      ),
+    );
+
     if (controller.state == LessonsFlowState.loading) {
-      return const Center(child: CircularProgressIndicator());
+      return Column(
+        children: [
+          header,
+          const Expanded(child: Center(child: CircularProgressIndicator())),
+        ],
+      );
     }
     if (controller.state == LessonsFlowState.failed) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            StatusPill(
-              label: i18n.t(StringKeys.lessonsError),
-              state: PillState.failure,
+      return Column(
+        children: [
+          header,
+          Expanded(
+            child: AppErrorState(
+              title: i18n.t(StringKeys.lessonsError),
+              action: StateAction(
+                label: i18n.t(StringKeys.commonRetry),
+                icon: Icons.refresh,
+                onPressed: () => controller.load(i18n.locale),
+              ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            AppButton(
-              label: i18n.t(StringKeys.commonRetry),
-              icon: Icons.refresh,
-              onPressed: () => controller.load(i18n.locale),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
     if (controller.lessons.isEmpty) {
-      return Center(child: StatusPill(label: i18n.t(StringKeys.lessonsEmpty)));
+      return Column(
+        children: [
+          header,
+          Expanded(
+            child: AppEmptyState(
+              title: i18n.t(StringKeys.lessonsEmpty),
+              icon: Icons.menu_book_outlined,
+            ),
+          ),
+        ],
+      );
     }
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      itemCount: controller.lessons.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        final lesson = controller.lessons[index];
-        return _LessonCard(
-          lesson: lesson,
-          i18n: i18n,
-          onTap: () => _openLesson(context, controller, lesson),
-        );
-      },
+      children: [
+        header,
+        const SizedBox(height: AppSpacing.xs),
+        for (final lesson in controller.lessons) ...[
+          _LessonCard(
+            lesson: lesson,
+            i18n: i18n,
+            onTap: () => _openLesson(context, controller, lesson),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
     );
   }
 }
@@ -163,20 +185,28 @@ class _LessonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final completed = lesson.completed;
     return Card(
       child: ListTile(
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
+          vertical: AppSpacing.sm,
         ),
-        leading: CircleAvatar(
-          backgroundColor: lesson.completed
-              ? AppColors.success.withValues(alpha: 0.15)
-              : AppColors.primaryContainer,
+        leading: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: completed
+                ? AppColors.success.withValues(alpha: 0.12)
+                : colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
           child: Icon(
-            lesson.completed ? Icons.check : Icons.menu_book_outlined,
-            color: lesson.completed ? AppColors.success : AppColors.primary,
+            completed ? Icons.check_rounded : Icons.menu_book_outlined,
+            color: completed ? AppColors.success : colorScheme.primary,
+            size: 24,
           ),
         ),
         title: Text(
@@ -196,31 +226,33 @@ class _LessonCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: AppSpacing.xs),
-            Row(
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xxs,
               children: [
                 StatusPill(
                   label: difficultyLabel(lesson.difficulty, i18n),
                   state: PillState.neutral,
                 ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  i18n
+                StatusPill(
+                  label: i18n
                       .t(StringKeys.lessonsMinutes)
                       .replaceFirst('{minutes}', '${lesson.estimatedMinutes}'),
-                  style: AppTypography.labelMedium,
+                  state: PillState.neutral,
                 ),
-                if (lesson.completed) ...[
-                  const SizedBox(width: AppSpacing.xs),
+                if (completed)
                   StatusPill(
                     label: i18n.t(StringKeys.lessonsCompleted),
                     state: PillState.success,
                   ),
-                ],
               ],
             ),
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -250,32 +282,31 @@ class _LessonDetail extends StatelessWidget {
             Expanded(
               child: Text(
                 lesson.title ?? lesson.slug,
-                style: AppTypography.headlineMedium,
+                style: AppTypography.headlineLarge,
               ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.xs),
-        Row(
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xxs,
           children: [
             StatusPill(
               label: difficultyLabel(lesson.difficulty, i18n),
               state: PillState.neutral,
             ),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              i18n
+            StatusPill(
+              label: i18n
                   .t(StringKeys.lessonsMinutes)
                   .replaceFirst('{minutes}', '${lesson.estimatedMinutes}'),
-              style: AppTypography.labelMedium,
+              state: PillState.neutral,
             ),
-            if (lesson.completed) ...[
-              const SizedBox(width: AppSpacing.xs),
+            if (lesson.completed)
               StatusPill(
                 label: i18n.t(StringKeys.lessonsCompleted),
                 state: PillState.success,
               ),
-            ],
           ],
         ),
         if (lesson.summary != null && lesson.summary!.isNotEmpty) ...[

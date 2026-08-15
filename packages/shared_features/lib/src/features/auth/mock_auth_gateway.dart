@@ -26,6 +26,9 @@ class MockAuthGateway implements AuthGateway {
   AuthUser? get currentUser => _current;
 
   @override
+  Future<String?> idToken() async => null;
+
+  @override
   Future<AuthUser> signInAnonymously() async {
     final user = AuthUser(
       uid: 'anon-${_current?.uid ?? '1'}',
@@ -40,6 +43,18 @@ class MockAuthGateway implements AuthGateway {
   Future<AuthUser> signInWithEmail(String email, String password) async {
     final user = AuthUser(
       uid: 'email-$email',
+      email: email,
+      displayName: email,
+    );
+    _current = user;
+    _controller.add(user);
+    return user;
+  }
+
+  @override
+  Future<AuthUser> createAccountWithEmail(String email, String password) async {
+    final user = AuthUser(
+      uid: 'new-$email',
       email: email,
       displayName: email,
     );

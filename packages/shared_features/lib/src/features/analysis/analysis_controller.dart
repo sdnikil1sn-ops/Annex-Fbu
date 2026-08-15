@@ -58,6 +58,26 @@ class AnalysisController extends ChangeNotifier {
   /// Submit text and start polling until the analysis is terminal.
   Future<void> submit(String text, {String locale = 'en'}) async {
     if (busy || text.trim().isEmpty) return;
+    await _begin(() => _api.submitText(text.trim(), locale: locale));
+  }
+
+  /// Submit an image (base64/data URL) and start polling until terminal.
+  Future<void> submitImage(String image, {String locale = 'en'}) async {
+    if (busy || image.isEmpty) return;
+    await _begin(() => _api.submitImage(image, locale: locale));
+  }
+
+  /// Reset to the idle state so the user can analyze something new.
+  void reset() {
+    _cancelPolling();
+    _state = AnalysisFlowState.idle;
+    _analysis = null;
+    _error = null;
+    _polls = 0;
+    notifyListeners();
+  }
+
+  Future<void> _begin(Future<Analysis> Function() submit) async {
     _cancelPolling();
     _state = AnalysisFlowState.submitting;
     _analysis = null;
@@ -66,7 +86,7 @@ class AnalysisController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _analysis = await _api.submitText(text.trim(), locale: locale);
+      _analysis = await submit();
     } catch (error) {
       _error = error.toString();
       _state = AnalysisFlowState.failed;

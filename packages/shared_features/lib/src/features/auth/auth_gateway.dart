@@ -7,6 +7,7 @@
 library;
 
 import 'package:firebase_auth/firebase_auth.dart' as fa;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 /// A signed-in user as the app understands it.
@@ -33,9 +34,16 @@ abstract interface class AuthGateway {
   /// The currently signed-in user, or null.
   AuthUser? get currentUser;
 
+  /// A fresh bearer token for the current user (Firebase ID token), or
+  /// null when signed out. Protected API calls authenticate with this.
+  Future<String?> idToken();
+
   Future<AuthUser> signInAnonymously();
 
   Future<AuthUser> signInWithEmail(String email, String password);
+
+  /// Create a new email/password account and sign it in.
+  Future<AuthUser> createAccountWithEmail(String email, String password);
 
   Future<AuthUser> signInWithGoogle();
 
@@ -59,6 +67,19 @@ class FirebaseAuthGateway implements AuthGateway {
   AuthUser? get currentUser => _fromFirebase(_auth.currentUser);
 
   @override
+  Future<String?> idToken() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    try {
+      return await user.getIdToken();
+    } catch (_) {
+      // A stale or revoked token degrades to anonymous — the API will
+      // answer 401 and the caller can surface it.
+      return null;
+    }
+  }
+
+  @override
   Future<AuthUser> signInAnonymously() async {
     final credential = await _auth.signInAnonymously();
     return _fromFirebase(credential.user)!;
@@ -74,7 +95,24 @@ class FirebaseAuthGateway implements AuthGateway {
   }
 
   @override
+  Future<AuthUser> createAccountWithEmail(String email, String password) async {
+    final credential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return _fromFirebase(credential.user)!;
+  }
+
+  @override
   Future<AuthUser> signInWithGoogle() async {
+    if (kIsWeb) {
+      // On the web the Google Identity flow runs through the Firebase
+      // Auth JS SDK already loaded by index.html (firebase-auth-compat).
+      final credential = await _auth.signInWithPopup(fa.GoogleAuthProvider());
+      return _fromFirebase(credential.user)!;
+    }
+    // Mobile: native GoogleSignIn, then swap the OAuth credential into
+    // Firebase Auth so the session is shared with the API tokens.
     final account = await _googleSignIn.signIn();
     if (account == null) {
       throw StateError('Google sign-in was cancelled');

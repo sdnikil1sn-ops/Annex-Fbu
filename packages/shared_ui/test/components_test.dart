@@ -71,6 +71,28 @@ void main() {
     });
   });
 
+  group('BrandMark', () {
+    testWidgets('renders the logo at sidebar and hero sizes', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                BrandMark(size: 40),
+                BrandMark(size: 56),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(BrandMark), findsNWidgets(2));
+      // The painter runs without throwing and paints a non-trivial
+      // surface (the ring + wordmark are vector-drawn).
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('Themes', () {
     test('light and dark themes derive from the token palette', () {
       final light = buildLightTheme();
@@ -80,6 +102,20 @@ void main() {
       expect(light.colorScheme.primary, AppColors.primary);
       expect(dark.colorScheme.primary, AppColors.primary);
       expect(light.cardTheme, isNotNull);
+    });
+
+    test('text styles resolve readable colors in both themes', () {
+      final light = buildLightTheme();
+      final dark = buildDarkTheme();
+      // The typography scale must never fall back to black-on-dark:
+      // every style carries the scheme's on-surface color.
+      expect(light.textTheme.headlineLarge?.color, light.colorScheme.onSurface);
+      expect(dark.textTheme.headlineLarge?.color, dark.colorScheme.onSurface);
+      expect(dark.textTheme.bodyMedium?.color, dark.colorScheme.onSurface);
+      expect(
+        light.textTheme.headlineLarge?.color,
+        isNot(dark.textTheme.headlineLarge?.color),
+      );
     });
   });
 }

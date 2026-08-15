@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="aGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8A2BE2"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="nGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B9B4C2"/>
+      <stop offset="0.55" stop-color="#6E6A75"/>
+      <stop offset="1" stop-color="#3F3B47"/>
+    </linearGradient>
+    <linearGradient id="ringPurple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8A2BE2"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="ringGrey" x1="1" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#B9B4C2"/>
+      <stop offset="1" stop-color="#5A5663"/>
+    </linearGradient>
+  </defs>
+  <!-- two-tone ring: purple top-left, metallic grey bottom-right -->
+  <path d="M 32 6 A 26 26 0 0 1 54.7 18.7" fill="none" stroke="url(#ringPurple)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 54.7 18.7 A 26 26 0 0 1 58 32" fill="none" stroke="url(#ringPurple)" stroke-width="4" stroke-linecap="round" opacity="0.15"/>
+  <path d="M 32 58 A 26 26 0 0 1 9.3 45.3" fill="none" stroke="url(#ringGrey)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 9.3 45.3 A 26 26 0 0 1 6 32" fill="none" stroke="url(#ringGrey)" stroke-width="4" stroke-linecap="round" opacity="0.15"/>
+  <!-- wordmark -->
+  <text x="22" y="41" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-weight="bold" font-style="italic" fill="url(#aGrad)">a</text>
+  <text x="33" y="42" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-weight="bold" font-style="italic" fill="url(#nGrad)">n</text>
+</svg>

@@ -47,7 +47,6 @@ class _ClassesScreenState extends State<ClassesScreen> {
     final controller = context.watch<ClassesController>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(i18n.t(StringKeys.classesTitle))),
       floatingActionButton: controller.selected == null
           ? FloatingActionButton(
               tooltip: i18n.t(StringKeys.classesCreate),
@@ -68,66 +67,79 @@ class _ClassesScreenState extends State<ClassesScreen> {
     if (controller.selected != null) {
       return _ClassDetail(controller: controller, i18n: i18n);
     }
+
+    final header = Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: PageHeader(
+        icon: Icons.school_outlined,
+        title: i18n.t(StringKeys.classesTitle),
+        subtitle: i18n.t(StringKeys.classesSubtitle),
+      ),
+    );
+
     if (controller.state == ClassesFlowState.loading) {
-      return const Center(child: CircularProgressIndicator());
+      return Column(
+        children: [
+          header,
+          const Expanded(child: Center(child: CircularProgressIndicator())),
+        ],
+      );
     }
     if (controller.state == ClassesFlowState.failed) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            StatusPill(
-              label: i18n.t(StringKeys.classesError),
-              state: PillState.failure,
+      return Column(
+        children: [
+          header,
+          Expanded(
+            child: AppErrorState(
+              title: i18n.t(StringKeys.classesError),
+              action: StateAction(
+                label: i18n.t(StringKeys.commonRetry),
+                icon: Icons.refresh,
+                onPressed: controller.load,
+              ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            AppButton(
-              label: i18n.t(StringKeys.commonRetry),
-              icon: Icons.refresh,
-              onPressed: controller.load,
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
     if (controller.classes.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              StatusPill(label: i18n.t(StringKeys.classesEmpty)),
-              const SizedBox(height: AppSpacing.md),
-              AppButton(
+      return Column(
+        children: [
+          header,
+          Expanded(
+            child: AppEmptyState(
+              title: i18n.t(StringKeys.classesEmpty),
+              icon: Icons.school_outlined,
+              action: StateAction(
                 label: i18n.t(StringKeys.classesJoin),
                 icon: Icons.login,
                 onPressed: () => _showJoinDialog(context),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       );
     }
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      itemCount: controller.classes.length + 1,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        if (index == controller.classes.length) {
-          return OutlinedButton.icon(
-            icon: const Icon(Icons.login),
-            label: Text(i18n.t(StringKeys.classesJoin)),
-            onPressed: () => _showJoinDialog(context),
-          );
-        }
-        final room = controller.classes[index];
-        return _ClassCard(
-          room: room,
-          i18n: i18n,
-          onTap: () => _openClass(context, controller, room),
-        );
-      },
+      children: [
+        header,
+        const SizedBox(height: AppSpacing.xs),
+        for (final room in controller.classes) ...[
+          _ClassCard(
+            room: room,
+            i18n: i18n,
+            onTap: () => _openClass(context, controller, room),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        const SizedBox(height: AppSpacing.sm),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.login),
+          label: Text(i18n.t(StringKeys.classesJoin)),
+          onPressed: () => _showJoinDialog(context),
+        ),
+      ],
     );
   }
 }
@@ -172,11 +184,17 @@ class _ClassCard extends StatelessWidget {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.xs,
         ),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primaryContainer,
+        leading: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
           child: Icon(
             room.isTeacher ? Icons.school_outlined : Icons.person_outline,
             color: AppColors.primary,
+            size: 24,
           ),
         ),
         title: Text(room.name, style: AppTypography.titleMedium),

@@ -4,8 +4,8 @@
   "description": "Learn Before You Believe — AI-powered media & information literacy.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#0f1b33",
-  "theme_color": "#2f6fed",
+  "background_color": "#131020",
+  "theme_color": "#5B3DF5",
   "icons": [
     {
       "src": "icons/icon-192.png",

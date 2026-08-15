@@ -1,0 +1,31 @@
+# =====================================================================
+# ANNEX — API keep-alive
+# Render's free tier sleeps after inactivity and cold-starts (~50s) on
+# the next request, which reads as a broken site in the browser. This
+# workflow pings the unauthenticated /health liveness probe every 10
+# minutes so the instance stays warm for demo day and normal browsing.
+# =====================================================================
+
+name: Keep-alive
+
+on:
+  schedule:
+    # Every 10 minutes (Render's idle timeout is 15 min).
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping production API
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hit the liveness probe
+        run: |
+          status="$(curl -sS -m 60 -o /dev/null -w '%{http_code}' \
+            https://annex-api-4lfw.onrender.com/health)"
+          echo "health probe -> HTTP ${status}"
+          test "${status}" = "200"

@@ -51,15 +51,22 @@ void main() {
     expect(controller.t('no.such.key'), 'no.such.key');
   });
 
-  test('load failure records an error', () async {
+  test('load failure records an error but falls back to built-in English',
+      () async {
     final controller = I18nController(api: _FailingApi(), locale: 'en');
     addTearDown(controller.dispose);
 
     await controller.load();
 
     expect(controller.error, isNotNull);
-    // Keys still resolve to themselves when no bundle is available.
-    expect(controller.t('analysis.submit'), 'analysis.submit');
+    // The UI never renders raw keys: the built-in English fallback keeps
+    // the interface readable while the backend is unreachable.
+    // Matches the production English bundle (the mock's 'Analyze text'
+    // is a mock-only value).
+    expect(controller.t('analysis.submit'), 'Analyze');
+    expect(controller.t('settings.title'), 'Settings');
+    // Unknown keys still fall back to the key itself.
+    expect(controller.t('no.such.key'), 'no.such.key');
   });
 }
 

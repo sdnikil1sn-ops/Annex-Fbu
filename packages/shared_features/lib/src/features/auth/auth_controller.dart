@@ -33,6 +33,13 @@ class AuthController extends ChangeNotifier {
   String? get error => _error;
   String? _error;
 
+  /// Clear the last action error (e.g. when switching auth modes).
+  void clearError() {
+    if (_error == null) return;
+    _error = null;
+    notifyListeners();
+  }
+
   void _onUserChanged(AuthUser? user) {
     _user = user;
     notifyListeners();
@@ -45,6 +52,10 @@ class AuthController extends ChangeNotifier {
   /// Sign in with email/password.
   Future<void> signInWithEmail(String email, String password) =>
       _guard(() => _gateway.signInWithEmail(email, password));
+
+  /// Create a new email/password account and sign it in.
+  Future<void> createAccountWithEmail(String email, String password) =>
+      _guard(() => _gateway.createAccountWithEmail(email, password));
 
   /// Sign in with Google.
   Future<void> signInWithGoogle() => _guard(() => _gateway.signInWithGoogle());

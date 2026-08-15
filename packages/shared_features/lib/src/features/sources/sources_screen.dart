@@ -40,11 +40,28 @@ class _SourcesScreenState extends State<SourcesScreen> {
     final controller = context.watch<SourcesController>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(i18n.t(StringKeys.sourcesTitle))),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
+            child: PageHeader(
+              icon: Icons.public_outlined,
+              title: i18n.t(StringKeys.sourcesTitle),
+              subtitle: i18n.t(StringKeys.sourcesSubtitle),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.xs,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
             child: TextField(
               controller: _searchController,
               textInputAction: TextInputAction.search,
@@ -58,7 +75,7 @@ class _SourcesScreenState extends State<SourcesScreen> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.arrow_forward),
+                      : const Icon(Icons.arrow_forward_rounded),
                   onPressed: controller.busy
                       ? null
                       : () => controller.search(_searchController.text),
@@ -86,31 +103,26 @@ class _SourcesScreenState extends State<SourcesScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (controller.state == SourcesFlowState.failed) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            StatusPill(
-              label: i18n.t(StringKeys.sourcesError),
-              state: PillState.failure,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AppButton(
-              label: i18n.t(StringKeys.commonRetry),
-              icon: Icons.refresh,
-              onPressed: () => controller.search(controller.query),
-            ),
-          ],
+      return AppErrorState(
+        title: i18n.t(StringKeys.sourcesError),
+        action: StateAction(
+          label: i18n.t(StringKeys.commonRetry),
+          icon: Icons.refresh,
+          onPressed: () => controller.search(controller.query),
         ),
       );
     }
     if (controller.hasSearched && controller.results.isEmpty) {
-      return Center(
-        child: StatusPill(label: i18n.t(StringKeys.sourcesNoResults)),
+      return AppEmptyState(
+        title: i18n.t(StringKeys.sourcesNoResults),
+        icon: Icons.search_off_rounded,
       );
     }
     if (!controller.hasSearched) {
-      return const SizedBox.shrink();
+      return AppEmptyState(
+        title: i18n.t(StringKeys.sourcesSearchHint),
+        icon: Icons.travel_explore_rounded,
+      );
     }
     return ListView.separated(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -166,13 +178,19 @@ class _SourceCard extends StatelessWidget {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.xs,
         ),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primaryContainer,
+        leading: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
           child: Icon(
             source.category == 'fact_check'
                 ? Icons.verified_outlined
                 : Icons.public,
             color: AppColors.primary,
+            size: 24,
           ),
         ),
         title: Text(

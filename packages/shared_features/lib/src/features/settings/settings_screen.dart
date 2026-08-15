@@ -23,15 +23,21 @@ class SettingsScreen extends StatelessWidget {
     final auth = context.watch<AuthController>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(i18n.t(StringKeys.settingsTitle))),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
+          PageHeader(
+            icon: Icons.settings_outlined,
+            title: i18n.t(StringKeys.settingsTitle),
+            subtitle: i18n.t(StringKeys.settingsSubtitle),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           _LanguageSection(settings: settings, i18n: i18n),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           _ThemeSection(settings: settings, i18n: i18n),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           _AccountSection(auth: auth, i18n: i18n),
+          const SizedBox(height: AppSpacing.md),
         ],
       ),
     );
@@ -81,7 +87,15 @@ class _LanguageSection extends StatelessWidget {
   }
 
   static String _displayName(String code) {
-    const names = {'en': 'English', 'pt': 'Português', 'es': 'Español'};
+    const names = {
+      'ar': 'العربية',
+      'de': 'Deutsch',
+      'en': 'English',
+      'es': 'Español',
+      'fr': 'Français',
+      'ja': '日本語',
+      'pt': 'Português',
+    };
     return names[code] ?? code;
   }
 }
@@ -140,6 +154,9 @@ class _AccountSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = auth.user;
+    final email = user?.email;
+    final name = user?.displayName ??
+        (email == null || email.isEmpty ? 'A' : email.split('@').first);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -152,15 +169,45 @@ class _AccountSection extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             if (user != null)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(child: Icon(Icons.person)),
-                title: Text(user.displayName ?? user.uid),
-                subtitle: Text(user.email ?? i18n.t(StringKeys.authGuestLabel)),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppColors.primaryContainer,
+                    child: Text(
+                      name.characters.first.toUpperCase(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: AppTypography.titleMedium),
+                        if (email != null && email.isNotEmpty)
+                          Text(
+                            email,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            const SizedBox(height: AppSpacing.md),
             AppButton(
               label: i18n.t(StringKeys.authSignOut),
               icon: Icons.logout,
+              variant: AppButtonVariant.outlined,
               busy: auth.busy,
               onPressed: auth.user == null ? null : auth.signOut,
             ),

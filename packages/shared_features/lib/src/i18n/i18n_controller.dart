@@ -41,12 +41,13 @@ class I18nController extends ChangeNotifier {
 
   /// Translate a typed key for the active locale.
   ///
-  /// Falls back to the bundle's resolved entries, then to the key itself.
+  /// Prefers the bundle's resolved entry, then the built-in English
+  /// fallback so the UI never renders a raw key while the bundle is
+  /// loading or the backend is unreachable.
   String t(String key) {
     final entry = _bundle?[key];
     if (entry != null) return entry.value;
-    if (StringKeys.isKnown(key)) return key;
-    return key;
+    return defaultEnglishValues[key] ?? key;
   }
 
   /// (Re)load the locale registry and the bundle for [locale].

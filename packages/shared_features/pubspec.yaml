@@ -29,6 +29,10 @@ dependencies:
   firebase_auth: ^6.0.0
   google_sign_in: ^6.2.0
 
+  # Image analysis (Phase 13): pick an image from the gallery/file picker
+  # on web and mobile, then submit it for OCR + forensics.
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

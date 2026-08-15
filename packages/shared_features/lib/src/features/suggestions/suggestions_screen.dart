@@ -61,10 +61,7 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
     final i18n = AppScope.of(context).i18n;
     final controller = context.watch<SuggestionsController>();
 
-    return Scaffold(
-      appBar: AppBar(title: Text(i18n.t(StringKeys.suggestionsTitle))),
-      body: _buildBody(context, i18n, controller),
-    );
+    return Scaffold(body: _buildBody(context, i18n, controller));
   }
 
   Widget _buildBody(
@@ -76,27 +73,24 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (controller.state == SuggestionsFlowState.failed) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            StatusPill(
-              label: i18n.t(StringKeys.suggestionsError),
-              state: PillState.failure,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            AppButton(
-              label: i18n.t(StringKeys.commonRetry),
-              icon: Icons.refresh,
-              onPressed: () => controller.load(i18n.locale),
-            ),
-          ],
+      return AppErrorState(
+        title: i18n.t(StringKeys.suggestionsError),
+        action: StateAction(
+          label: i18n.t(StringKeys.commonRetry),
+          icon: Icons.refresh,
+          onPressed: () => controller.load(i18n.locale),
         ),
       );
     }
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
+        PageHeader(
+          icon: Icons.translate_outlined,
+          title: i18n.t(StringKeys.suggestionsTitle),
+          subtitle: i18n.t(StringKeys.suggestionsSubtitle),
+        ),
+        const SizedBox(height: AppSpacing.lg),
         Text(
           i18n
               .t(StringKeys.suggestionsContributorNote)

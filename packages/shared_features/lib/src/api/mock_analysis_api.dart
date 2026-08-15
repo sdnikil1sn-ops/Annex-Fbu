@@ -64,6 +64,7 @@ class MockAnalysisApi implements AnalysisApi {
 
   /// Whether the last submission was recorded (test hook).
   String? lastSubmittedText;
+  String? lastSubmittedImage;
   String? lastSubmittedLocale;
 
   static final _report = AnalysisReport(
@@ -93,6 +94,24 @@ class MockAnalysisApi implements AnalysisApi {
   }
 
   @override
+  Future<Analysis> submitImage(String image, {String locale = 'en'}) async {
+    lastSubmittedImage = image;
+    lastSubmittedLocale = locale;
+    await Future<void>.delayed(delay);
+    final now = DateTime.now().toUtc();
+    final analysis = Analysis(
+      id: 'mock-${_nextId++}',
+      inputType: AnalysisInputType.image,
+      status: AnalysisStatus.pending,
+      locale: locale,
+      createdAt: now,
+    );
+    _analyses.add(analysis);
+    _inputs.add('image');
+    return analysis;
+  }
+
+  @override
   Future<Analysis> fetchAnalysis(String id) async {
     await Future<void>.delayed(delay);
     final index = _analyses.indexWhere((a) => a.id == id);
@@ -106,6 +125,10 @@ class MockAnalysisApi implements AnalysisApi {
     // Failure is driven by the input captured at submit time, so each
     // analysis is evaluated independently.
     final failed = _inputs[index].contains(failTrigger);
+    final report = initialReport ??
+        (current.inputType == AnalysisInputType.image
+            ? _imageReport
+            : _report);
     final updated = failed
         ? Analysis(
             id: current.id,
@@ -121,13 +144,32 @@ class MockAnalysisApi implements AnalysisApi {
             inputType: current.inputType,
             status: AnalysisStatus.completed,
             locale: current.locale,
-            report: initialReport ?? _report,
+            report: report,
             createdAt: current.createdAt,
             completedAt: DateTime.now().toUtc(),
           );
     _analyses[index] = updated;
     return updated;
   }
+
+  static final AnalysisReport _imageReport = AnalysisReport(
+    summary:
+        'The image shows a claim with checkable evidence; OCR text was extracted and forensics found no signs of tampering.',
+    claims: const [
+      ClaimItem(text: 'The poster attributes the claim to an official source', verifiability: 0.7),
+      ClaimItem(text: 'The image shows signs of digital editing', verifiability: 0.25),
+    ],
+    media: MediaContext(
+      inputType: 'image',
+      mime: 'image/jpeg',
+      sizeBytes: 24891,
+      ocrText:
+          'Breaking: officials confirm the announcement takes effect today.',
+      ocrConfidence: 0.93,
+      riskScore: 0.12,
+      signals: const {'ela_score': 0.12, 'width': 1280, 'height': 720},
+    ),
+  );
 
   @override
   Future<List<Lesson>> fetchLessons({String locale = 'en'}) async {
