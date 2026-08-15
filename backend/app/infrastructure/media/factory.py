@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import logging
 
-from app.application.ports.media import ForensicsAdapter, OcrAdapter
+from app.application.ports.media import (
+    ForensicsAdapter,
+    OcrAdapter,
+    OcrResult,
+)
 from app.application.services.media_pipeline import MediaPipeline
 from app.core.config import Settings
 from app.core.exceptions import ConfigurationError
@@ -15,28 +19,48 @@ logger = logging.getLogger(__name__)
 
 
 def build_ocr_adapter(settings: Settings) -> OcrAdapter:
-    """Build the Tesseract OCR adapter, falling back to the explicit mock.
+    """Build the Tesseract OCR adapter with honest degradation.
 
-    A missing Tesseract binary raises ``ConfigurationError`` at construction;
-    the fallback keeps the application bootable on machines without the
-    binary (local development) and is logged as a warning so the degradation
-    stays observable where real OCR is expected.
+    A missing Tesseract binary raises ``ConfigurationError`` at construction.
+    The fallback keeps the application bootable on machines without the
+    binary and is logged loudly so the degradation stays observable.
+
+    Crucially, the fallback never fabricates text: an empty OCR result
+    (with an error-level log in production) is returned instead of the
+    fake "mock ocr text" a naive mock would produce — image submissions
+    then fail honestly ("no text found") instead of generating claims
+    from invented content.
 
     Args:
         settings: Application settings with the OCR language codes.
 
     Returns:
-        The Tesseract adapter, or the explicit mock when the binary is absent.
+        The Tesseract adapter, or an honest empty-result fallback when the
+        binary is absent.
     """
     try:
         from app.infrastructure.media.pytesseract_ocr import TesseractOcrAdapter
 
         return TesseractOcrAdapter(languages=settings.ocr_languages)
     except ConfigurationError:
-        logger.warning(
-            "tesseract binary not found; falling back to the mock OCR adapter"
-        )
-        return MockOcrAdapter()
+        if settings.app_env == "production":
+            logger.error(
+                "tesseract binary is not installed in this production "
+                "environment — image OCR will return no text. Install "
+                "tesseract-ocr (backend/apt.txt) so image analysis works."
+            )
+        else:
+            logger.warning(
+                "tesseract binary not found; OCR will return no text"
+            )
+        return _EmptyOcrAdapter()
+
+
+class _EmptyOcrAdapter(OcrAdapter):
+    """Returns an empty OCR result instead of fabricating text."""
+
+    def extract_text(self, image_bytes: bytes) -> OcrResult:
+        return OcrResult(text="", confidence=None, language="eng")
 
 
 def build_forensics_adapter() -> ForensicsAdapter:

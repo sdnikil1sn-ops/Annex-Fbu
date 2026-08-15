@@ -100,13 +100,18 @@ def test_ocr_adapter_builds_tesseract_when_binary_present(
     assert adapter._languages == "eng+spa"  # type: ignore[attr-defined]
 
 
-def test_ocr_adapter_falls_back_to_mock_when_binary_missing(
+def test_ocr_adapter_falls_back_with_empty_result_when_binary_missing(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A missing Tesseract binary must fall back to the explicit mock and log it."""
+    """A missing Tesseract binary must degrade honestly (empty OCR), never fabricate text."""
     monkeypatch.setitem(sys.modules, "pytesseract", make_fake_pytesseract(missing_binary=True))
-    assert isinstance(build_ocr_adapter(make_settings()), MockOcrAdapter)
+    adapter = build_ocr_adapter(make_settings())
+    # The fallback must not produce fake OCR text (which would generate
+    # claims from invented content in production).
+    result = adapter.extract_text(b"not-an-image")
+    assert result.text == ""
+    assert result.confidence is None
     assert "tesseract binary not found" in caplog.text
 
 
@@ -133,10 +138,10 @@ def test_app_binds_providers_from_settings() -> None:
 def test_app_binds_ocr_fallback_when_tesseract_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """An app built without the Tesseract binary must bind the mock OCR."""
+    """An app built without the Tesseract binary must bind the honest fallback."""
     monkeypatch.setitem(sys.modules, "pytesseract", make_fake_pytesseract(missing_binary=True))
     app = create_app(Settings(_env_file=None, app_env="test", log_level="WARNING"))
-    assert isinstance(app.state.ocr_adapter, MockOcrAdapter)
+    assert app.state.ocr_adapter.extract_text(b"x").text == ""
 
 
 def test_app_binds_openai_analyzer_when_key_present() -> None:

@@ -1,0 +1,5 @@
+# System packages for the ANNEX API on Render's Python buildpack.
+# Without tesseract-ocr the OCR adapter silently falls back to a mock,
+# so image analysis returns fake text and no claims.
+tesseract-ocr
+tesseract-ocr-eng

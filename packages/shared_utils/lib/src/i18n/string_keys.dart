@@ -80,6 +80,8 @@ abstract final class StringKeys {
   static const analysisImageRisk = 'analysis.image_risk';
   static const analysisImageSignals = 'analysis.image_signals';
   static const analysisImageDimensions = 'analysis.image_dimensions';
+  static const analysisImageNoText = 'analysis.image_no_text';
+  static const analysisNoClaims = 'analysis.no_claims';
 
   // lessons (Phase 15/16)
   static const lessonsTitle = 'lessons.title';
@@ -240,6 +242,8 @@ abstract final class StringKeys {
     analysisImageRisk,
     analysisImageSignals,
     analysisImageDimensions,
+    analysisImageNoText,
+    analysisNoClaims,
     lessonsTitle,
     lessonsSubtitle,
     lessonsComplete,
@@ -422,6 +426,10 @@ const Map<String, String> defaultEnglishValues = {
   StringKeys.analysisImageRisk: 'Tamper risk',
   StringKeys.analysisImageSignals: 'Signals',
   StringKeys.analysisImageDimensions: 'Dimensions',
+  StringKeys.analysisImageNoText:
+      'No readable text found in this image — try a clearer screenshot or photo.',
+  StringKeys.analysisNoClaims:
+      'No verifiable claims found in this content.',
 
   // lessons
   StringKeys.lessonsTitle: 'Lessons',

@@ -392,6 +392,28 @@ class _ReportView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+        if (report.claims.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.verified_outlined,
+                    color: AppColors.success,
+                    size: 22,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      i18n.t(StringKeys.analysisNoClaims),
+                      style: AppTypography.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         for (final claim in report.claims) ...[
           ClaimCard(
             text: claim.text,
@@ -516,6 +538,38 @@ class _MediaContextCard extends StatelessWidget {
                 child: Text(
                   media.ocrText!,
                   style: AppTypography.bodyMedium,
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: colorScheme.outline.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.text_fields_rounded,
+                      size: 18,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        i18n.t(StringKeys.analysisImageNoText),
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
