@@ -19,41 +19,55 @@ logger = logging.getLogger(__name__)
 
 
 def build_ocr_adapter(settings: Settings) -> OcrAdapter:
-    """Build the Tesseract OCR adapter with honest degradation.
+    """Build the OCR adapter: Tesseract, else Gemini vision, else empty.
 
-    A missing Tesseract binary raises ``ConfigurationError`` at construction.
-    The fallback keeps the application bootable on machines without the
-    binary and is logged loudly so the degradation stays observable.
+    The fallback chain keeps image analysis working on every deployment:
 
-    Crucially, the fallback never fabricates text: an empty OCR result
-    (with an error-level log in production) is returned instead of the
-    fake "mock ocr text" a naive mock would produce — image submissions
-    then fail honestly ("no text found") instead of generating claims
-    from invented content.
+    1. ``TesseractOcrAdapter`` — local binary (dev machines, Docker).
+    2. ``GeminiOcrAdapter`` — the configured Gemini API key (no system
+       packages; Render's native Python runtime installs neither the
+       binary nor ``apt.txt`` deps).
+    3. ``_EmptyOcrAdapter`` — honest empty result (never fabricated text)
+       when no OCR provider is available.
+
+    Crucially, the final fallback never fabricates text: an empty OCR
+    result is returned instead of fake "mock ocr text", so image
+    submissions fail honestly instead of generating claims from invented
+    content.
 
     Args:
-        settings: Application settings with the OCR language codes.
+        settings: Application settings with OCR languages and the
+            Gemini key/model.
 
     Returns:
-        The Tesseract adapter, or an honest empty-result fallback when the
-        binary is absent.
+        The first working OCR adapter in the chain.
     """
     try:
         from app.infrastructure.media.pytesseract_ocr import TesseractOcrAdapter
 
         return TesseractOcrAdapter(languages=settings.ocr_languages)
     except ConfigurationError:
-        if settings.app_env == "production":
-            logger.error(
-                "tesseract binary is not installed in this production "
-                "environment — image OCR will return no text. Install "
-                "tesseract-ocr (backend/apt.txt) so image analysis works."
-            )
-        else:
-            logger.warning(
-                "tesseract binary not found; OCR will return no text"
-            )
-        return _EmptyOcrAdapter()
+        logger.warning(
+            "tesseract binary not found; checking the Gemini vision fallback"
+        )
+    if settings.gemini_api_key:
+        from google import genai
+
+        from app.infrastructure.media.gemini_ocr import GeminiOcrAdapter
+
+        logger.info(
+            "using Gemini vision OCR fallback (model=%s)", settings.gemini_model
+        )
+        return GeminiOcrAdapter(
+            client=genai.Client(api_key=settings.gemini_api_key),
+            model=settings.gemini_model,
+        )
+    if settings.app_env == "production":
+        logger.error(
+            "no OCR provider configured (tesseract missing and no "
+            "gemini_api_key) — image OCR will return no text"
+        )
+    return _EmptyOcrAdapter()
 
 
 class _EmptyOcrAdapter(OcrAdapter):

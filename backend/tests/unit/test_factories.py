@@ -100,11 +100,22 @@ def test_ocr_adapter_builds_tesseract_when_binary_present(
     assert adapter._languages == "eng+spa"  # type: ignore[attr-defined]
 
 
-def test_ocr_adapter_falls_back_with_empty_result_when_binary_missing(
+def test_ocr_adapter_uses_gemini_when_binary_missing_and_key_set(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A missing Tesseract binary must degrade honestly (empty OCR), never fabricate text."""
+    """Without Tesseract but with a Gemini key, OCR must use Gemini vision."""
+    monkeypatch.setitem(sys.modules, "pytesseract", make_fake_pytesseract(missing_binary=True))
+    adapter = build_ocr_adapter(make_settings(gemini_api_key="test-key"))
+    assert type(adapter).__name__ == "GeminiOcrAdapter"
+    assert "Gemini vision OCR fallback" in caplog.text
+
+
+def test_ocr_adapter_falls_back_with_empty_result_when_no_provider(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """No Tesseract and no Gemini key must degrade honestly (empty OCR)."""
     monkeypatch.setitem(sys.modules, "pytesseract", make_fake_pytesseract(missing_binary=True))
     adapter = build_ocr_adapter(make_settings())
     # The fallback must not produce fake OCR text (which would generate

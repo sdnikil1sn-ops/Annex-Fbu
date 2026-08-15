@@ -17,6 +17,7 @@ from app.application.ports.media import (
     OcrResult,
 )
 from app.core.exceptions import ConfigurationError
+from app.infrastructure.media.gemini_ocr import GeminiOcrAdapter
 from app.infrastructure.media.mock_media_adapters import (
     MockForensicsAdapter,
     MockOcrAdapter,
@@ -163,6 +164,51 @@ def test_forensics_rejects_garbage_bytes() -> None:
     """The adapter must surface decode failures as MediaProcessingError."""
     with pytest.raises(MediaProcessingError, match="cannot decode"):
         OpenCvForensicsAdapter().analyze(b"garbage" * 100)
+
+
+# ----------------------------------------------------------------------
+# Gemini vision OCR adapter
+# ----------------------------------------------------------------------
+
+
+def test_gemini_ocr_extracts_text_from_response() -> None:
+    """The Gemini OCR adapter must forward the text from the model."""
+
+    class FakeResponse:
+        text = "Vaccines cause autism\nThe Earth is flat"
+
+    class FakeModels:
+        def generate_content(self, **kwargs: Any) -> FakeResponse:
+            # The image bytes must travel as an inline-data Part.
+            part = kwargs["contents"]
+            assert part.inline_data.data == b"fake-image-bytes"
+            assert part.inline_data.mime_type == "image/png"
+            return FakeResponse()
+
+    class FakeClient:
+        models = FakeModels()
+
+    adapter = GeminiOcrAdapter(client=FakeClient(), model="gemini-test")
+    result = adapter.extract_text(b"fake-image-bytes")
+    assert result.text == "Vaccines cause autism\nThe Earth is flat"
+    assert result.confidence is None
+
+
+def test_gemini_ocr_returns_empty_when_model_gives_nothing() -> None:
+    """An empty model response must yield an empty (honest) OCR result."""
+
+    class FakeResponse:
+        text = None
+
+    class FakeModels:
+        def generate_content(self, **kwargs: Any) -> FakeResponse:
+            return FakeResponse()
+
+    class FakeClient:
+        models = FakeModels()
+
+    adapter = GeminiOcrAdapter(client=FakeClient(), model="gemini-test")
+    assert adapter.extract_text(b"x").text == ""
 
 
 # ----------------------------------------------------------------------
