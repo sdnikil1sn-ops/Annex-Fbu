@@ -61,11 +61,13 @@ class Settings(BaseSettings):
     firebase_service_account_path: str | None = None
 
     # AI providers (Phase 6): claim analysis. At least one key enables the
-    # analyzer; Gemini is optional (ADR-0006).
+    # analyzer; Gemini is optional (ADR-0006). The default Gemini model
+    # tracks what new API keys can actually call (gemini-2.5-flash was
+    # retired for new users in 2026).
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3-flash-preview"
 
     # OCR (Phase 6): Tesseract language codes.
     ocr_languages: str = "eng"

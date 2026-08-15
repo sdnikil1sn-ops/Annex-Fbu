@@ -40,7 +40,7 @@ def test_ai_provider_defaults() -> None:
     assert settings.openai_api_key is None
     assert settings.openai_model == "gpt-4o-mini"
     assert settings.gemini_api_key is None
-    assert settings.gemini_model == "gemini-2.5-flash"
+    assert settings.gemini_model == "gemini-3-flash-preview"
     assert settings.ocr_languages == "eng"
 
 
