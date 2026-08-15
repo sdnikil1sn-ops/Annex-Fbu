@@ -42,7 +42,16 @@ def build_analysis_task_dispatcher(
 
     ``None`` keeps submissions on the interim synchronous path (tests and
     broker-less deployments); a broker enables async processing.
+
+    The dispatcher is built only when an explicit ``CELERY_BROKER_URL`` is
+    configured — not when merely ``REDIS_URL`` is set. ``REDIS_URL`` also
+    backs the rate limiter and readiness probe, and a deployment that
+    configures only Redis (e.g. the Render free tier) has no worker
+    process to consume the queue, so submissions would dead-letter
+    instead of completing. Requiring the explicit broker keeps such
+    deployments on the working inline path while Cloud Run and other
+    worker-enabled topologies keep the async pipeline.
     """
-    if not (settings.celery_broker_url or settings.redis_url):
+    if not settings.celery_broker_url:
         return None
     return CeleryAnalysisTaskDispatcher(celery_app or get_celery_app(settings))

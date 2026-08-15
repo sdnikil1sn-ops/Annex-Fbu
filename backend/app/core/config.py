@@ -80,8 +80,10 @@ class Settings(BaseSettings):
 
     # Async pipelines (Phase 7, ADR-0008): Redis URL used by the rate
     # limiter and readiness probe; Celery broker/result endpoints for the
-    # analysis worker. Broker/backend fall back to the Redis URL so a
-    # single local Redis instance covers development.
+    # analysis worker. The analysis worker is only enabled when an
+    # explicit CELERY_BROKER_URL is set (broker/backend may fall back to
+    # the Redis URL when a single local instance covers development); a
+    # deployment with only REDIS_URL keeps the synchronous inline path.
     redis_url: str | None = None
     celery_broker_url: str | None = None
     celery_result_backend: str | None = None

@@ -21,6 +21,10 @@ from app.infrastructure.media.factory import build_forensics_adapter, build_ocr_
 from app.infrastructure.media.mock_media_adapters import MockOcrAdapter
 from app.infrastructure.media.opencv_forensics import OpenCvForensicsAdapter
 from app.infrastructure.media.pytesseract_ocr import TesseractOcrAdapter
+from app.infrastructure.tasks.dispatcher import (
+    CeleryAnalysisTaskDispatcher,
+    build_analysis_task_dispatcher,
+)
 from app.main import create_app
 
 
@@ -155,3 +159,33 @@ def test_app_accepts_injected_analyzer() -> None:
         claim_analyzer=injected,
     )
     assert app.state.claim_analyzer is injected
+
+
+# ----------------------------------------------------------------------
+# Analysis task dispatcher gating
+# ----------------------------------------------------------------------
+
+
+def test_dispatcher_absent_with_only_redis_url() -> None:
+    """REDIS_URL alone (rate limiter/readiness) must keep the inline path.
+
+    A deployment without an explicit broker has no worker process to
+    consume the queue, so dispatching would leave analyses PENDING
+    forever (or 500). The dispatcher must not be built.
+    """
+    dispatcher = build_analysis_task_dispatcher(
+        make_settings(redis_url="redis://localhost:6379/0")
+    )
+    assert dispatcher is None
+
+
+def test_dispatcher_built_with_explicit_broker() -> None:
+    """An explicit CELERY_BROKER_URL enables the async worker path."""
+    dispatcher = build_analysis_task_dispatcher(
+        make_settings(
+            redis_url="redis://localhost:6379/0",
+            celery_broker_url="redis://localhost:6379/1",
+            celery_result_backend="redis://localhost:6379/2",
+        )
+    )
+    assert isinstance(dispatcher, CeleryAnalysisTaskDispatcher)
