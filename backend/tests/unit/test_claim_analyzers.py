@@ -173,6 +173,39 @@ def test_openai_rejects_malformed_nested_claims() -> None:
         adapter.analyze("text")
 
 
+def test_openai_tolerates_prose_relevance() -> None:
+    """A human-readable relevance string must degrade to None, not fail.
+
+    Models sometimes return relevance as prose instead of a number; the
+    analysis must still complete (previously this 500-ed as
+    ``analysis.processing_failed``).
+    """
+    payload = json.dumps(
+        {
+            "claims": [
+                {
+                    "text": "Claim one",
+                    "verifiability": 0.8,
+                    "verdict": "verifiable",
+                    "rationale": "Well-sourced.",
+                    "evidence": [
+                        {
+                            "kind": "link",
+                            "url": "https://example.com/src",
+                            "relevance": "Directly refutes the claim.",
+                        }
+                    ],
+                }
+            ],
+            "summary": "A summary.",
+        }
+    )
+    adapter, _ = make_openai(content=payload)
+    result = adapter.analyze("text")
+    assert result.claims[0].evidence[0].relevance is None
+    assert result.claims[0].evidence[0].url == "https://example.com/src"
+
+
 def test_openai_normalizes_provider_errors() -> None:
     """Network/provider failures must surface as AnalysisProviderError."""
     adapter, _ = make_openai(error=RuntimeError("connection reset"))

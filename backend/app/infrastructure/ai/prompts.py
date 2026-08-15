@@ -46,17 +46,32 @@ def _parse_evidence(items: Any) -> tuple[EvidenceItem, ...]:
         url = item.get("url")
         quote = item.get("quote")
         snippet = item.get("snippet")
-        relevance = item.get("relevance")
         evidence.append(
             EvidenceItem(
                 kind=str(item.get("kind", "link")),
                 url=str(url) if url is not None else None,
                 quote=str(quote) if quote is not None else None,
                 snippet=str(snippet) if snippet is not None else None,
-                relevance=float(relevance) if relevance is not None else None,
+                relevance=_coerce_relevance(item.get("relevance")),
             )
         )
     return tuple(evidence)
+
+
+def _coerce_relevance(value: Any) -> float | None:
+    """Coerce an evidence relevance to a float, tolerating model drift.
+
+    The prompt asks for a numeric relevance, but models sometimes return a
+    short human-readable string instead. Model output is untrusted data, so
+    a non-numeric value degrades to ``None`` rather than failing the whole
+    analysis (which previously surfaced as ``analysis.processing_failed``).
+    """
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def parse_claims(payload: dict[str, Any]) -> ClaimAnalysis:
