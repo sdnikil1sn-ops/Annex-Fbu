@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-3-flash-preview"
+    gemini_model: str = "gemini-3.1-flash-lite"
 
     # OCR (Phase 6): Tesseract language codes.
     ocr_languages: str = "eng"
