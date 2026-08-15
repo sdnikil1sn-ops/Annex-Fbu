@@ -103,3 +103,6 @@ supabase/.temp/
 supabase/.branches/
 supabase/.db/
 supabase/.env
+
+docker/secrets/
+*.json
