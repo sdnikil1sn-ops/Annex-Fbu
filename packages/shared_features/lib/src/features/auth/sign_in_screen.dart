@@ -390,7 +390,7 @@ class _SignInCardState extends State<_SignInCard> {
             if (controller.error != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
-                controller.error!,
+                _friendlyError(controller, i18n),
                 style: AppTypography.bodySmall.copyWith(
                   color: colorScheme.error,
                 ),
@@ -435,6 +435,21 @@ class _SignInCardState extends State<_SignInCard> {
     }
   }
 
+  /// Map a Firebase error code to a friendly, translated message.
+  static String _friendlyError(AuthController controller, I18nController i18n) {
+    final key = switch (controller.errorCode) {
+      'wrong-password' || 'invalid-credential' =>
+        StringKeys.authErrorWrongPassword,
+      'user-not-found' => StringKeys.authErrorUserNotFound,
+      'email-already-in-use' => StringKeys.authErrorEmailInUse,
+      'weak-password' => StringKeys.authErrorWeakPassword,
+      'too-many-requests' => StringKeys.authErrorTooManyRequests,
+      'network-request-failed' => StringKeys.authErrorNetwork,
+      _ => StringKeys.authErrorDefault,
+    };
+    return i18n.t(key);
+  }
+
   static String? _validateEmail(String? value, I18nController i18n) {
     final email = value?.trim() ?? '';
     final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
@@ -445,7 +460,10 @@ class _SignInCardState extends State<_SignInCard> {
   static String? _validatePassword(String? value, I18nController i18n) {
     final password = value ?? '';
     if (password.isEmpty) return i18n.t(StringKeys.authPasswordTooShort);
-    if (password.length < 6) return i18n.t(StringKeys.authPasswordTooShort);
+    if (password.length < 8) return i18n.t(StringKeys.authPasswordTooShort);
+    final hasLetter = RegExp(r'[A-Za-z]').hasMatch(password);
+    final hasNumber = RegExp(r'[0-9]').hasMatch(password);
+    if (!hasLetter || !hasNumber) return i18n.t(StringKeys.authPasswordTooWeak);
     return null;
   }
 

@@ -16,12 +16,28 @@ void main() {
   });
 
   test('email sign-in exposes the identity', () async {
-    final controller = AuthController(MockAuthGateway());
+    final gateway = MockAuthGateway();
+    final controller = AuthController(gateway);
     addTearDown(controller.dispose);
 
-    await controller.signInWithEmail('a@example.com', 'secret');
+    await controller.createAccountWithEmail('a@example.com', 'secret123');
+    await controller.signInWithEmail('a@example.com', 'secret123');
 
     expect(controller.user!.email, 'a@example.com');
+  });
+
+  test('wrong password is rejected and surfaces the error code', () async {
+    final gateway = MockAuthGateway();
+    final controller = AuthController(gateway);
+    addTearDown(controller.dispose);
+
+    await controller.createAccountWithEmail('a@example.com', 'secret123');
+    await controller.signOut();
+    await controller.signInWithEmail('a@example.com', 'wrongpass');
+
+    expect(controller.user, isNull);
+    expect(controller.errorCode, 'wrong-password');
+    expect(controller.error, isNotNull);
   });
 
   test('sign-out clears the user and notifies', () async {

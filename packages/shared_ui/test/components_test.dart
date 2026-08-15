@@ -45,7 +45,35 @@ void main() {
 
       expect(find.text('The sky is blue'), findsOneWidget);
       expect(find.text('Verifiability: 90%'), findsOneWidget);
-      expect(find.text('High'), findsOneWidget);
+    });
+
+    testWidgets('renders verdict, rationale, and evidence', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ClaimCard(
+              text: 'Vaccines cause autism',
+              verifiability: 1.0,
+              verdict: 'false',
+              rationale: 'No causal link in large studies.',
+              evidence: [
+                ClaimEvidenceView(
+                  url: 'https://cdc.gov/vaccinesafety',
+                  snippet: 'Studies show no association.',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Vaccines cause autism'), findsOneWidget);
+      expect(find.text('False'), findsOneWidget); // humanized verdict badge
+      expect(
+        find.text('No causal link in large studies.'),
+        findsOneWidget,
+      );
+      expect(find.text('https://cdc.gov/vaccinesafety'), findsOneWidget);
     });
   });
 

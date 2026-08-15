@@ -36,6 +36,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   String? _pickError;
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild so the Analyze button tracks whether input is present.
+    _text.addListener(() => setState(() {}));
+  }
+
+  @override
   void dispose() {
     _text.dispose();
     super.dispose();
@@ -95,12 +102,19 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     I18nController i18n,
     AnalysisController controller,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _ExampleChips(
+              onSelect: controller.busy
+                  ? null
+                  : (example) => setState(() => _text.text = example),
+            ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _text,
               minLines: 6,
@@ -110,6 +124,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               decoration: InputDecoration(
                 hintText: i18n.t(StringKeys.analysisInputHint),
                 hintMaxLines: 2,
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.4),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -118,10 +139,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               icon: Icons.analytics_outlined,
               busy: controller.state == AnalysisFlowState.submitting,
               expanded: true,
-              onPressed: () => controller.submit(
-                _text.text,
-                locale: AppScope.of(context).i18n.locale,
-              ),
+              onPressed: _text.text.trim().isEmpty
+                  ? null
+                  : () => controller.submit(
+                        _text.text,
+                        locale: AppScope.of(context).i18n.locale,
+                      ),
             ),
           ],
         ),
@@ -374,9 +397,69 @@ class _ReportView extends StatelessWidget {
             text: claim.text,
             verifiability: claim.verifiability,
             label: i18n.t(StringKeys.analysisVerifiability),
+            verdict: claim.verdict,
+            rationale: claim.rationale,
+            evidence: [
+              for (final item in claim.evidence)
+                ClaimEvidenceView(
+                  url: item.url,
+                  quote: item.quote,
+                  snippet: item.snippet,
+                ),
+            ],
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
+      ],
+    );
+  }
+}
+
+/// Quick-start example prompts for the text input.
+class _ExampleChips extends StatelessWidget {
+  const _ExampleChips({required this.onSelect});
+
+  /// Called with the example text when a chip is tapped.
+  final void Function(String example)? onSelect;
+
+  static const List<String> examples = [
+    '"The Earth is flat and vaccines cause autism."',
+    '"Eating chocolate daily cures headaches — miracle study proves it."',
+    '"A leaked report shows the moon landing was filmed in a desert studio."',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Try an example',
+          style: AppTypography.labelMedium.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xxs,
+          children: [
+            for (final example in examples)
+              ActionChip(
+                avatar: const Icon(Icons.bolt_rounded, size: 16),
+                label: Text(
+                  example.length > 34
+                      ? '${example.substring(0, 34)}…'
+                      : example,
+                ),
+                visualDensity: VisualDensity.compact,
+                onPressed: onSelect == null
+                    ? null
+                    : () => onSelect!(example),
+              ),
+          ],
+        ),
       ],
     );
   }

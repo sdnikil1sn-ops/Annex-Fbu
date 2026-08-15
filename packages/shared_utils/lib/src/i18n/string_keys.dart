@@ -50,6 +50,7 @@ abstract final class StringKeys {
   static const authHaveAccount = 'auth.have_account';
   static const authInvalidEmail = 'auth.invalid_email';
   static const authPasswordTooShort = 'auth.password_too_short';
+  static const authPasswordTooWeak = 'auth.password_too_weak';
   static const authPasswordsDontMatch = 'auth.passwords_dont_match';
   static const authContinueGuest = 'auth.continue_guest';
   static const authContinueGoogle = 'auth.continue_google';
@@ -58,6 +59,14 @@ abstract final class StringKeys {
   static const authFeatureAnalyze = 'auth.feature_analyze';
   static const authFeatureSources = 'auth.feature_sources';
   static const authFeatureLessons = 'auth.feature_lessons';
+  static const authErrorWrongPassword = 'auth.error_wrong_password';
+  static const authErrorUserNotFound = 'auth.error_user_not_found';
+  static const authErrorEmailInUse = 'auth.error_email_in_use';
+  static const authErrorWeakPassword = 'auth.error_weak_password';
+  static const authErrorInvalidCredential = 'auth.error_invalid_credential';
+  static const authErrorTooManyRequests = 'auth.error_too_many_requests';
+  static const authErrorNetwork = 'auth.error_network';
+  static const authErrorDefault = 'auth.error_default';
 
   // analysis input modes (image analysis)
   static const analysisModeText = 'analysis.mode_text';
@@ -203,6 +212,7 @@ abstract final class StringKeys {
     authHaveAccount,
     authInvalidEmail,
     authPasswordTooShort,
+    authPasswordTooWeak,
     authPasswordsDontMatch,
     authContinueGuest,
     authContinueGoogle,
@@ -211,6 +221,14 @@ abstract final class StringKeys {
     authFeatureAnalyze,
     authFeatureSources,
     authFeatureLessons,
+    authErrorWrongPassword,
+    authErrorUserNotFound,
+    authErrorEmailInUse,
+    authErrorWeakPassword,
+    authErrorInvalidCredential,
+    authErrorTooManyRequests,
+    authErrorNetwork,
+    authErrorDefault,
     analysisModeText,
     analysisModeImage,
     analysisImageHint,
@@ -371,7 +389,8 @@ const Map<String, String> defaultEnglishValues = {
   StringKeys.authCreateAccount: 'Create account',
   StringKeys.authHaveAccount: 'Already have an account? Sign in',
   StringKeys.authInvalidEmail: 'Enter a valid email address.',
-  StringKeys.authPasswordTooShort: 'Password must be at least 6 characters.',
+  StringKeys.authPasswordTooShort: 'Password must be at least 8 characters.',
+  StringKeys.authPasswordTooWeak: 'Use at least one letter and one number.',
   StringKeys.authPasswordsDontMatch: 'Passwords do not match.',
   StringKeys.authContinueGuest: 'Continue as guest',
   StringKeys.authContinueGoogle: 'Continue with Google',
@@ -381,6 +400,14 @@ const Map<String, String> defaultEnglishValues = {
   StringKeys.authFeatureAnalyze: 'Verify claims, headlines & images with AI',
   StringKeys.authFeatureSources: 'Check the credibility of news sources',
   StringKeys.authFeatureLessons: 'Learn media literacy in minutes',
+  StringKeys.authErrorWrongPassword: 'Incorrect password. Try again.',
+  StringKeys.authErrorUserNotFound: 'No account found for this email.',
+  StringKeys.authErrorEmailInUse: 'An account with this email already exists.',
+  StringKeys.authErrorWeakPassword: 'Password is too weak. Use at least 8 characters.',
+  StringKeys.authErrorInvalidCredential: 'Invalid email or password.',
+  StringKeys.authErrorTooManyRequests: 'Too many attempts. Try again in a moment.',
+  StringKeys.authErrorNetwork: 'Network error. Check your connection.',
+  StringKeys.authErrorDefault: 'Sign-in failed. Please try again.',
 
   // analysis input modes (image analysis)
   StringKeys.analysisModeText: 'Text',

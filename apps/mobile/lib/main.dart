@@ -9,6 +9,7 @@ library;
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_features/shared_features.dart';
@@ -19,14 +20,16 @@ import 'core/config.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase is optional in local/dev builds: without a project config the
-  // app still runs through the guest flow.
-  AuthGateway auth = MockAuthGateway();
+  // Firebase is the only auth backend in production. In release builds a
+  // failed initialization must surface so the accepting-everything mock
+  // can never serve real users; the mock is debug-only for local runs.
+  AuthGateway auth;
   try {
     await Firebase.initializeApp();
     auth = FirebaseAuthGateway();
-  } catch (_) {
-    // No Firebase configuration — fall back to the explicit mock.
+  } catch (error) {
+    if (kReleaseMode) rethrow;
+    auth = MockAuthGateway();
   }
 
   final AnalysisApi api = useMockApi

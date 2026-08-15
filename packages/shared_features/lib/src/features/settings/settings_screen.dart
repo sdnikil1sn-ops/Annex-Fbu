@@ -93,8 +93,10 @@ class _LanguageSection extends StatelessWidget {
       'en': 'English',
       'es': 'Español',
       'fr': 'Français',
+      'hi': 'हिन्दी',
       'ja': '日本語',
       'pt': 'Português',
+      'ta': 'தமிழ்',
     };
     return names[code] ?? code;
   }

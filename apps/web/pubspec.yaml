@@ -28,6 +28,8 @@ dependencies:
   # State + platform init.
   provider: ^6.1.0
   firebase_core: ^4.0.0
+  # Web platform interop (fullscreen toggle in the shell).
+  web: ^1.1.0
   # Material adaptive icons reference the Cupertino icon font (keeps the
   # web build warning-free when icon tree-shaking is on).
   cupertino_icons: ^1.0.8

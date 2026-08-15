@@ -13,6 +13,8 @@ import 'package:shared_features/shared_features.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_utils/shared_utils.dart';
 
+import 'fullscreen_stub.dart' if (dart.library.js_interop) 'fullscreen_web.dart';
+
 /// The root widget of the ANNEX web app.
 class WebApp extends StatelessWidget {
   const WebApp({super.key});
@@ -76,6 +78,7 @@ class WebShell extends StatefulWidget {
 
 class _WebShellState extends State<WebShell> {
   int _index = 0;
+  bool _sidebarCollapsed = false;
 
   static const List<Widget> _pages = [
     AnalysisScreen(),
@@ -95,6 +98,9 @@ class _WebShellState extends State<WebShell> {
         if (constraints.maxWidth >= 900) {
           return _WideShell(
             index: _index,
+            collapsed: _sidebarCollapsed,
+            onToggleSidebar: () =>
+                setState(() => _sidebarCollapsed = !_sidebarCollapsed),
             onSelect: (index) => setState(() => _index = index),
             i18n: i18n,
           );
@@ -185,11 +191,15 @@ List<NavigationDestination> _barDestinations(I18nController i18n) {
 class _WideShell extends StatelessWidget {
   const _WideShell({
     required this.index,
+    required this.collapsed,
+    required this.onToggleSidebar,
     required this.onSelect,
     required this.i18n,
   });
 
   final int index;
+  final bool collapsed;
+  final VoidCallback onToggleSidebar;
   final ValueChanged<int> onSelect;
   final I18nController i18n;
 
@@ -198,7 +208,13 @@ class _WideShell extends StatelessWidget {
     return Scaffold(
       body: Row(
         children: [
-          _Sidebar(index: index, onSelect: onSelect, i18n: i18n),
+          _Sidebar(
+            index: index,
+            collapsed: collapsed,
+            onToggle: onToggleSidebar,
+            onSelect: onSelect,
+            i18n: i18n,
+          ),
           Expanded(
             child: ColoredBox(
               color: Theme.of(context).scaffoldBackgroundColor,
@@ -225,18 +241,22 @@ class _WideShell extends StatelessWidget {
 class _Sidebar extends StatelessWidget {
   const _Sidebar({
     required this.index,
+    required this.collapsed,
+    required this.onToggle,
     required this.onSelect,
     required this.i18n,
   });
 
   final int index;
+  final bool collapsed;
+  final VoidCallback onToggle;
   final ValueChanged<int> onSelect;
   final I18nController i18n;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 236,
+      width: collapsed ? 76 : 236,
       decoration: const BoxDecoration(
         color: AppColors.sidebarBackground,
         border: Border(
@@ -246,58 +266,106 @@ class _Sidebar extends StatelessWidget {
       child: NavigationRail(
         selectedIndex: index,
         onDestinationSelected: onSelect,
-        labelType: NavigationRailLabelType.all,
+        labelType: collapsed
+            ? NavigationRailLabelType.none
+            : NavigationRailLabelType.all,
         minExtendedWidth: 236,
         groupAlignment: 0,
-        leading: _SidebarBrand(i18n: i18n),
-        trailing: const _SidebarUser(),
+        leading: _SidebarBrand(
+          i18n: i18n,
+          collapsed: collapsed,
+          onToggle: onToggle,
+        ),
+        trailing: _SidebarUser(collapsed: collapsed),
         destinations: _railDestinations(i18n),
       ),
     );
   }
 }
 
-/// The ANNEX brand block at the top of the sidebar.
+/// The ANNEX brand block at the top of the sidebar, with the
+/// collapse/expand and fullscreen controls.
 class _SidebarBrand extends StatelessWidget {
-  const _SidebarBrand({required this.i18n});
+  const _SidebarBrand({
+    required this.i18n,
+    required this.collapsed,
+    required this.onToggle,
+  });
 
   final I18nController i18n;
+  final bool collapsed;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 22),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 14, 10, 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const BrandMark(size: 40),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (!collapsed)
+            Row(
               children: [
-                const Text(
-                  'ANNEX',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    color: AppColors.onSidebar,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  i18n.t(StringKeys.commonLearnBeforeYouBelieve),
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.2,
-                    color: AppColors.onSidebarMuted,
-                    height: 1.3,
+                const BrandMark(size: 40),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'ANNEX',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                          color: AppColors.onSidebar,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        i18n.t(StringKeys.commonLearnBeforeYouBelieve),
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.2,
+                          color: AppColors.onSidebarMuted,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
+            )
+          else
+            const Center(child: BrandMark(size: 40)),
+          const SizedBox(height: 14),
+          // Window-style controls: minimize (collapse the sidebar) and
+          // maximize (browser fullscreen).
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: collapsed ? 'Expand sidebar' : 'Minimize sidebar',
+                onPressed: onToggle,
+                icon: Icon(
+                  collapsed
+                      ? Icons.unfold_more_rounded
+                      : Icons.unfold_less_rounded,
+                  size: 20,
+                ),
+                color: AppColors.onSidebarMuted,
+                visualDensity: VisualDensity.compact,
+              ),
+              IconButton(
+                tooltip: 'Toggle fullscreen',
+                onPressed: toggleFullscreen,
+                icon: const Icon(Icons.fullscreen_rounded, size: 20),
+                color: AppColors.onSidebarMuted,
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
           ),
         ],
       ),
@@ -307,7 +375,9 @@ class _SidebarBrand extends StatelessWidget {
 
 /// The signed-in user card at the bottom of the sidebar.
 class _SidebarUser extends StatelessWidget {
-  const _SidebarUser();
+  const _SidebarUser({this.collapsed = false});
+
+  final bool collapsed;
 
   @override
   Widget build(BuildContext context) {
@@ -321,6 +391,36 @@ class _SidebarUser extends StatelessWidget {
             : email.split('@').first);
     final detail = email ?? '';
 
+    if (collapsed) {
+      // Icon-only footer: avatar plus sign-out.
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.gradientStart,
+              child: Text(
+                name.isEmpty ? 'A' : name.characters.first.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            IconButton(
+              tooltip: i18n.t(StringKeys.authSignOut),
+              onPressed: auth.busy ? null : auth.signOut,
+              icon: const Icon(Icons.logout_rounded, size: 19),
+              color: AppColors.onSidebarMuted,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
       child: Row(

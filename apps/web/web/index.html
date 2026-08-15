@@ -20,23 +20,9 @@
   <title>ANNEX</title>
 </head>
 <body>
-    <!-- Firebase Auth is bootstrapped by the Flutter app itself; the
-       script below only defines the project config so the compat SDK
-       picks it up when Firebase Auth initializes. -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDi-w4PxwL7IMekiztf2f641QB-79Zz_6E",
-      authDomain: "annex-adv-38561.firebaseapp.com",
-      projectId: "annex-adv-38561",
-      storageBucket: "annex-adv-38561.firebasestorage.app",
-      messagingSenderId: "294477889054",
-      appId: "1:294477889054:web:749909fc91c43056f0b80f",
-      measurementId: "G-N088NRPMYD"
-    };
-    firebase.initializeApp(firebaseConfig);
-  </script>
+  <!-- Firebase is bootstrapped by the Flutter app itself: FirebaseOptions
+       are passed from Dart (lib/firebase_options.dart) and FlutterFire
+       auto-injects the modular JS SDK. No manual Firebase scripts here. -->
   <!-- This script installs flutter.js, loads the app, and sets up the
        service worker. The app is rendered into the DOM by Flutter. -->
   <script src="flutter_bootstrap.js" async></script>

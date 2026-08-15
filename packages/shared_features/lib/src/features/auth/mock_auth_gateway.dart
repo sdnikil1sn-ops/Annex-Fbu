@@ -39,12 +39,23 @@ class MockAuthGateway implements AuthGateway {
     return user;
   }
 
+  /// Test hook: credentials accepted by [signInWithEmail].
+  final Map<String, String> knownAccounts = {};
+
   @override
   Future<AuthUser> signInWithEmail(String email, String password) async {
+    final normalized = email.trim().toLowerCase();
+    final expected = knownAccounts[normalized];
+    if (expected == null) {
+      throw StateError('user-not-found');
+    }
+    if (expected != password) {
+      throw StateError('wrong-password');
+    }
     final user = AuthUser(
-      uid: 'email-$email',
-      email: email,
-      displayName: email,
+      uid: 'email-$normalized',
+      email: normalized,
+      displayName: normalized,
     );
     _current = user;
     _controller.add(user);
@@ -53,10 +64,15 @@ class MockAuthGateway implements AuthGateway {
 
   @override
   Future<AuthUser> createAccountWithEmail(String email, String password) async {
+    final normalized = email.trim().toLowerCase();
+    if (knownAccounts.containsKey(normalized)) {
+      throw StateError('email-already-in-use');
+    }
+    knownAccounts[normalized] = password;
     final user = AuthUser(
-      uid: 'new-$email',
-      email: email,
-      displayName: email,
+      uid: 'new-$normalized',
+      email: normalized,
+      displayName: normalized,
     );
     _current = user;
     _controller.add(user);

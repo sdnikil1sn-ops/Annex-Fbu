@@ -96,6 +96,11 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'The Earth orbits the Sun');
+    await tester.drag(
+      find.byType(ListView).first,
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Analyze text'));
     await tester.pumpAndSettle();
 

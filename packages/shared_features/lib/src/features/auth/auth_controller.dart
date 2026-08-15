@@ -6,6 +6,7 @@ library;
 
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart' as fa;
 import 'package:flutter/foundation.dart';
 
 import 'auth_gateway.dart';
@@ -33,10 +34,16 @@ class AuthController extends ChangeNotifier {
   String? get error => _error;
   String? _error;
 
+  /// The machine-readable error code of the last failure, when available
+  /// (e.g. ``wrong-password`` from a FirebaseAuthException).
+  String? get errorCode => _errorCode;
+  String? _errorCode;
+
   /// Clear the last action error (e.g. when switching auth modes).
   void clearError() {
-    if (_error == null) return;
+    if (_error == null && _errorCode == null) return;
     _error = null;
+    _errorCode = null;
     notifyListeners();
   }
 
@@ -66,6 +73,7 @@ class AuthController extends ChangeNotifier {
   Future<void> _guard(Future<Object?> Function() action) async {
     _busy = true;
     _error = null;
+    _errorCode = null;
     notifyListeners();
     try {
       await action();
@@ -73,11 +81,28 @@ class AuthController extends ChangeNotifier {
       // Surface the failure instead of leaking an unhandled zone error
       // (e.g. when the user cancels the Google sign-in sheet).
       _error = error.toString();
+      _errorCode = _extractCode(error);
       notifyListeners();
     } finally {
       _busy = false;
       notifyListeners();
     }
+  }
+
+  /// Best-effort extraction of a Firebase error code.
+  ///
+  /// FirebaseAuthException exposes a structured ``code``; StateError (used
+  /// by the debug mock) carries the code as its message.
+  static String? _extractCode(Object error) {
+    final code = switch (error) {
+      fa.FirebaseAuthException(:final code) => code,
+      StateError(:final message) => message,
+      _ => null,
+    };
+    // Firebase messages look like "firebase_auth/wrong-password" — keep the
+    // segment after the slash (or the whole code) as the stable identifier.
+    if (code == null) return null;
+    return code.contains('/') ? code.split('/').last : code;
   }
 
   @override

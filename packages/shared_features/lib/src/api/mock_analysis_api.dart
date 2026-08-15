@@ -797,6 +797,8 @@ class MockAnalysisApi implements AnalysisApi {
       defaultLocale: 'en',
       locales: [
         LocaleInfo(code: 'en'),
+        LocaleInfo(code: 'hi', fallbackCode: 'en'),
+        LocaleInfo(code: 'ta', fallbackCode: 'en'),
         LocaleInfo(code: 'pt', fallbackCode: 'en'),
         LocaleInfo(code: 'es', fallbackCode: 'en'),
       ],

@@ -48,15 +48,32 @@ enum AnalysisStatus {
   bool get isTerminal => this == completed || this == failed;
 }
 
-/// One extracted claim with its verifiability score.
+/// One extracted claim with its verifiability score and verdict.
 class ClaimItem {
-  const ClaimItem({required this.text, required this.verifiability});
+  const ClaimItem({
+    required this.text,
+    required this.verifiability,
+    this.verdict,
+    this.rationale,
+    this.evidence = const [],
+  });
 
   /// The claim as written in the analyzed content.
   final String text;
 
   /// Verifiability in `[0, 1]` (1 = fully verifiable).
   final double verifiability;
+
+  /// The verdict label from the model (``true``/``false``/``misleading``/
+  /// ``verifiable``/``partially_verifiable``/``unverifiable``), when
+  /// provided.
+  final String? verdict;
+
+  /// A short explanation of the verdict, when provided.
+  final String? rationale;
+
+  /// Supporting sources/quotes gathered by the model.
+  final List<ClaimEvidence> evidence;
 
   /// Whether the score is in the documented `[0, 1]` range.
   bool get isInRange => verifiability >= 0 && verifiability <= 1;
@@ -70,11 +87,65 @@ class ClaimItem {
     if (score is! num) {
       throw const FormatException('Claim requires a numeric verifiability');
     }
-    return ClaimItem(text: text, verifiability: score.toDouble());
+    final evidence = json['evidence'];
+    return ClaimItem(
+      text: text,
+      verifiability: score.toDouble(),
+      verdict: json['verdict'] as String?,
+      rationale: json['rationale'] as String?,
+      evidence: evidence is List
+          ? evidence
+                .whereType<Map>()
+                .map((item) => ClaimEvidence.fromJson(
+                    Map<String, dynamic>.from(item)))
+                .toList()
+          : const [],
+    );
   }
 
-  Map<String, dynamic> toJson() =>
-      {'text': text, 'verifiability': verifiability};
+  Map<String, dynamic> toJson() => {
+        'text': text,
+        'verifiability': verifiability,
+        if (verdict != null) 'verdict': verdict,
+        if (rationale != null) 'rationale': rationale,
+        'evidence': evidence.map((item) => item.toJson()).toList(),
+      };
+}
+
+/// One piece of supporting evidence for a claim (source, quote, link).
+class ClaimEvidence {
+  const ClaimEvidence({
+    this.kind,
+    this.url,
+    this.quote,
+    this.snippet,
+  });
+
+  /// Evidence kind: ``link``, ``quote``, or ``source``.
+  final String? kind;
+
+  /// The source URL, when available.
+  final String? url;
+
+  /// The quoted passage, when available.
+  final String? quote;
+
+  /// A short summary of what the source says.
+  final String? snippet;
+
+  factory ClaimEvidence.fromJson(Map<String, dynamic> json) => ClaimEvidence(
+        kind: json['kind'] as String?,
+        url: json['url'] as String?,
+        quote: json['quote'] as String?,
+        snippet: json['snippet'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (kind != null) 'kind': kind,
+        if (url != null) 'url': url,
+        if (quote != null) 'quote': quote,
+        if (snippet != null) 'snippet': snippet,
+      };
 }
 
 /// Optional media-processing context merged into reports for URL and image
